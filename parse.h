@@ -42,11 +42,19 @@ struct instruction {
     int numArgs; //Tracks number of args
 };
 
+//Struct for execution of instructions (all processes)
+struct execution {
+    struct instruction* insList;
+    int status; //Status of processes
+    int num; //number of processes (project requires max 2 processes)
+    bool background;
+};
+
 //Parse input
-struct instruction* parseInput(char* input, int* size, bool* validity);
+struct instruction* parseInput(char* input, int* size, bool* validity, bool* backg);
 
 //Execute instructions
-int executeInstructions(struct instruction* insList);
+int executeInstructions(struct execution exeIns);
 //Check pipe first and then file redirection
 
 //Make struct for jobs, comprised of processes (each process is an instruction struct, add later)

@@ -33,16 +33,20 @@ int main() {
         //User Enters input
         input = readline("#"); //readline returns pointer
 
-        //Size of instruction
+        //Size of instruction (number of processes)
         int size = 0;
 
         //Validity of instruction
         bool valid = true;
 
+        //Background
+        bool background = false;
+
         //Parse the instruction
-        struct instruction* insList = parseInput(input, &size, &valid);
+        struct instruction* insList = parseInput(input, &size, &valid, &background);
 
         //Debug at end of parse
+        printf("\nNumber of processes: %d", size);
         if(debugMain){printf("\nParse finished, Valid: %d\n", valid);}
         for(int i = 0; i < size && debugMain; i++){
             printf("Index %d: Command: %s stdin: %s stdout: %s Args: ", (i), insList[i].command, insList[i].stdin.stdinFileName, insList[i].stdout.stdoutFileName);
@@ -53,8 +57,10 @@ int main() {
         }
         if(debugMain){printf("\n");} 
 
+        struct execution exeList = {insList, 0, size, background};
+
         //One task in foreground, rest in background
-        int a = executeInstructions(insList);
+        int a = executeInstructions(exeList);
     }
     return 0;
 }

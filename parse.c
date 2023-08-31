@@ -6,7 +6,7 @@
 //This file contains code to parse instauctions
 
 bool debug = true;
-struct instruction* parseInput(char* input, int* size, bool* validity){
+struct instruction* parseInput(char* input, int* size, bool* validity, bool* backg){
 //Determine if instruction should be run in foreground or background
     bool background; 
     
@@ -194,6 +194,9 @@ struct instruction* parseInput(char* input, int* size, bool* validity){
 
     //Set validity
     *validity = valid;
+
+    //set background
+    *backg = background;
 
     return insList;
 }
