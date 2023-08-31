@@ -8,6 +8,7 @@
 #include <fcntl.h>
 
 bool debugIns = true;
+
 //Execute instructions
 //Executes max of 2 processes (first two entered)
 int executeInstructions(struct execution exeIns){
@@ -66,14 +67,18 @@ int executeInstructions(struct execution exeIns){
             dup2(exeIns.insList[0].stdin.stdinFileName, 0);
         }   
         if(exeIns.insList[0].stdout.type == TOFILE){
+            if(debugIns){printf("stdout file: %s\n", exeIns.insList[0].stdout.stdoutFileName);}
             //Try to open file
             if(open(exeIns.insList[0].stdout.stdoutFileName, O_RDONLY) == -1){
                 //stdout file doesn't exist, create file
                 open(exeIns.insList[0].stdout.stdoutFileName, O_CREAT | O_WRONLY);
             }
 
+            //Set file desciptor
+            int fileDescriptor = open(exeIns.insList[0].stdout.stdoutFileName, O_WRONLY);
+
             //Set stdout
-            dup2(exeIns.insList[0].stdout.stdoutFileName, 1);
+            dup2(fileDescriptor, 1);
         }
         if(exeIns.insList[0].stderr.type == TOFILE){
             //Try to open file
@@ -82,8 +87,11 @@ int executeInstructions(struct execution exeIns){
                 open(exeIns.insList[0].stderr.stderrFileName, O_CREAT | O_WRONLY);
             }
 
-            //Set stdout
-            dup2(exeIns.insList[0].stderr.stderrFileName, 1);
+            //Set file desciptor
+            int fileDescriptor = open(exeIns.insList[0].stderr.stderrFileName, O_WRONLY);
+
+            //Set stderr
+            dup2(fileDescriptor, 2);
         }
 
         //Execute child process (fork returns 0 in curPid)

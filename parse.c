@@ -96,6 +96,7 @@ struct instruction* parseInput(char* input, int* size, bool* validity, bool* bac
                     //Change stdin of command to filename
                     if(debug){printf("<, %s into stdin", element);}
                     char* fileName = (char*)malloc(sizeof(element) + 1);
+                    strcpy(fileName, element);
                     insList[indexIns].stdin.stdinFileName = fileName;
                     insList[indexIns].stdin.type = TOFILE;
                 }
@@ -107,7 +108,7 @@ struct instruction* parseInput(char* input, int* size, bool* validity, bool* bac
                 valid = false;
             }
             else{
-                //Parse next, put into stdin
+                //Parse next, put into stdout
                 element = strtok(NULL, " "); 
                 if(element == NULL){
                     if(debug){printf("Invalid: need input for stdin");}
@@ -117,6 +118,7 @@ struct instruction* parseInput(char* input, int* size, bool* validity, bool* bac
                     //Change stdin of command to filename
                     if(debug){printf(">, %s into stdout", element);}
                     char* fileName = (char*)malloc(sizeof(element) + 1);
+                    strcpy(fileName, element);
                     insList[indexIns].stdout.stdoutFileName = fileName;
                     insList[indexIns].stdout.type = TOFILE;
                 }
@@ -128,7 +130,7 @@ struct instruction* parseInput(char* input, int* size, bool* validity, bool* bac
                 valid = false;
             }
             else{
-                //Parse next, put into stdin
+                //Parse next, put into stderr
                 element = strtok(NULL, " "); 
                 if(element == NULL){
                     if(debug){printf("Invalid: need input for stderr");}
@@ -138,6 +140,7 @@ struct instruction* parseInput(char* input, int* size, bool* validity, bool* bac
                     //Change stdin of command to filename
                     if(debug){printf(">, %s into stderr", element);}
                     char* fileName = (char*)malloc(sizeof(element) + 1);
+                    strcpy(fileName, element);
                     insList[indexIns].stderr.stderrFileName = fileName;
                     insList[indexIns].stderr.type = TOFILE;
                 }
