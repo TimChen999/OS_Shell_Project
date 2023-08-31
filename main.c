@@ -64,8 +64,11 @@ int main() {
         bool pipeBool = false;
         if(size > 1){pipeBool = true;}
 
+        //Create pipe to pass as parameter
+        int pipes[2] = {0,0};
+
         //One task in foreground, rest in background
-        int a = executeInstructions(exeList, pipeBool);
+        int a = executeInstructions(exeList, pipeBool, pipes);
     }
     return 0;
 }
