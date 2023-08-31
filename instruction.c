@@ -11,13 +11,20 @@ bool debugIns = true;
 
 //Execute instructions
 //Executes max of 2 processes (first two entered)
-int executeInstructions(struct execution exeIns){
+int executeInstructions(struct execution exeIns, bool pipeBool){
     pid_t curPid = getpid(); 
     pid_t myPid;
     if(debugIns){printf("Execute %d Instructions, Current pid: %d\n", exeIns.num, curPid);}
 
     //Fork command (If parent, curPid becomes child's pid, if child, curPid becomes zero)
     curPid = fork();
+
+    //use pipeline if needed (number of process > 1)
+    int pipes[2]; //pipes[0] is read, pipes[1] is write
+    if(exeIns.num > 1){
+        if(debugIns){printf("Make pipeline");} //Only need to be done once, not done on second call of function
+        pipe(pipes);
+    }
 
     //If else condition for whether each thread is parent or child
     if (curPid > 0) { 
@@ -35,7 +42,7 @@ int executeInstructions(struct execution exeIns){
             struct execution exeSecond = {secondInstruction, exeIns.status, 1, exeIns.background};
             
             //Go back to executeInstructions with second instruction
-            executeInstructions(exeSecond);
+            executeInstructions(exeSecond, true);
         }
 
         //Child process running
@@ -54,8 +61,13 @@ int executeInstructions(struct execution exeIns){
 
     //Child process
     } else if (curPid == 0) { 
-        //Set dup/dup2 to change stdin/stdout/stderr
-        if(exeIns.insList[0].stdin.type == TOFILE){
+        //Set dup/dup2 to change stdin/stdout/stderr, take piping into consideration
+        //Set stdin, if second process of pipe, set the stdout of the first file as stdin of second
+        if(pipeBool = true && exeIns.num == 1){
+            dup2(pipes[0], 0); //For stdin of second command, read from pipe[0]
+        }
+        //Normally set stdin
+        else if(exeIns.insList[0].stdin.type == TOFILE){
             //Try to open file
             if(open(exeIns.insList[0].stdin.stdinFileName, O_RDONLY) == -1){
                 //Return error, stdin file doesn't exist
@@ -63,10 +75,17 @@ int executeInstructions(struct execution exeIns){
                 return -1;
             }
 
+            //Set file desciptor
+            int fileDescriptor = open(exeIns.insList[0].stdout.stdoutFileName, O_WRONLY);
+
             //If successful (file exists), set stdin
-            dup2(exeIns.insList[0].stdin.stdinFileName, 0);
+            dup2(fileDescriptor, 0);
         }   
-        if(exeIns.insList[0].stdout.type == TOFILE){
+        //Set stdin, if first process of pipe, set the stdout of the first one into stdout of second
+        if(pipeBool = true && exeIns.num > 1){
+            dup2(pipes[1], 1); //For stdout of first command, write to pipe[1]
+        }
+        else if(exeIns.insList[0].stdout.type == TOFILE){
             if(debugIns){printf("stdout file: %s\n", exeIns.insList[0].stdout.stdoutFileName);}
             //Try to open file
             if(open(exeIns.insList[0].stdout.stdoutFileName, O_RDONLY) == -1){

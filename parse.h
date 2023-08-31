@@ -54,7 +54,7 @@ struct execution {
 struct instruction* parseInput(char* input, int* size, bool* validity, bool* backg);
 
 //Execute instructions
-int executeInstructions(struct execution exeIns);
+int executeInstructions(struct execution exeIns, bool pipeBool);
 //Check pipe first and then file redirection
 
 //Make struct for jobs, comprised of processes (each process is an instruction struct, add later)

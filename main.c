@@ -57,10 +57,15 @@ int main() {
         }
         if(debugMain){printf("\n");} 
 
+        //List of processes to execute
         struct execution exeList = {insList, 0, size, background};
 
+        //Boolean determine whether to pipe
+        bool pipeBool = false;
+        if(size > 1){pipeBool = true;}
+
         //One task in foreground, rest in background
-        int a = executeInstructions(exeList);
+        int a = executeInstructions(exeList, pipeBool);
     }
     return 0;
 }
