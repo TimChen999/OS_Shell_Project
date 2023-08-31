@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <fcntl.h>
 
 bool debugIns = true;
 //Execute instructions
@@ -50,17 +51,51 @@ int executeInstructions(struct execution exeIns){
         //Child process done (Note, if first child finishes before second, executeInstructions(exeSecond) will not be done before second child finishes execution, statement will always print second child as done first)
         if(debugIns){printf("%d Child done\n", curPid);}
 
-
+    //Child process
     } else if (curPid == 0) { 
+        //Set dup/dup2 to change stdin/stdout/stderr
+        if(exeIns.insList[0].stdin.type == TOFILE){
+            //Try to open file
+            if(open(exeIns.insList[0].stdin.stdinFileName, O_RDONLY) == -1){
+                //Return error, stdin file doesn't exist
+                if(debugIns){printf("Child process not found");}
+                return -1;
+            }
+
+            //If successful (file exists), set stdin
+            dup2(exeIns.insList[0].stdin.stdinFileName, 0);
+        }   
+        if(exeIns.insList[0].stdout.type == TOFILE){
+            //Try to open file
+            if(open(exeIns.insList[0].stdout.stdoutFileName, O_RDONLY) == -1){
+                //stdout file doesn't exist, create file
+                open(exeIns.insList[0].stdout.stdoutFileName, O_CREAT | O_WRONLY);
+            }
+
+            //Set stdout
+            dup2(exeIns.insList[0].stdout.stdoutFileName, 1);
+        }
+        if(exeIns.insList[0].stderr.type == TOFILE){
+            //Try to open file
+            if(open(exeIns.insList[0].stderr.stderrFileName, O_RDONLY) == -1){
+                //stdout file doesn't exist, create file
+                open(exeIns.insList[0].stderr.stderrFileName, O_CREAT | O_WRONLY);
+            }
+
+            //Set stdout
+            dup2(exeIns.insList[0].stderr.stderrFileName, 1);
+        }
+
         //Execute child process (fork returns 0 in curPid)
         myPid = getpid();
-        printf("[%d] child\n", myPid);
+        if(debugIns){printf("[%d] child\n", myPid);}
         execvp(exeIns.insList[0].args[0], exeIns.insList[0].args);
         if(debugIns){printf("\ninstruction failed to execute\n");} //Fix (implemented): args needs to be null terminated
         
     } else {
         //Failed fork
-        perror("Fork failed");
+        if(debugIns){printf("Fork failed");}
+        return -1;
     }
     
     return 0;
