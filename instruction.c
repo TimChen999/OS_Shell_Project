@@ -7,6 +7,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
+//ISSUE: further explore piping with cat, ls | cat appears to hang (maybe some sort of deadlock?)
 bool debugIns = true;
 
 //Execute instructions
@@ -26,8 +27,10 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
     curPid = fork();
 
     //If else condition for whether each thread is parent or child
+    //-----------------------------------------------------------------------------------
+    //Parent process (fork returns child pid value in curPid)
+    //-----------------------------------------------------------------------------------
     if (curPid > 0) { 
-        //Parent process (fork returns child pid value in curPid)
         myPid = getpid();
         if(debugIns){printf("[%d] parent of [%d]\n", myPid, curPid);}
 
@@ -57,18 +60,22 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 
         //Child process done (Note, if first child finishes before second, executeInstructions(exeSecond) will not be done before second child finishes execution, statement will always print second child as done first)
         if(debugIns){printf("%d Child done\n", curPid);}
+        close(pipes);
 
+    //-----------------------------------------------------------------------------------
     //Child process
+    //-----------------------------------------------------------------------------------
     } else if (curPid == 0) { 
         //Data for child process
         myPid = getpid();
-        if(debugIns){printf("[%d] child\n", myPid);}
+        if(debugIns){printf("[%d] child, pipeBool %d, exeIns.num %d\n", myPid, pipeBool, exeIns.num);}
 
         //Set dup/dup2 to change stdin/stdout/stderr, take piping into consideration
         //Pipe stdin of first command from read end of pipe
-        if(pipeBool = true && exeIns.num == 1){
-            if(debugIns){printf("Pipe stdin of [%d] into pipes[0]: %d\n", myPid, pipes[0]);}
+        if(pipeBool == 1 && exeIns.num == 1){
+            if(debugIns){printf("Pipe stdin of [%d], command: %s into pipes[0]: %d\n", myPid, exeIns.insList[1], pipes[0]);}
             dup2(pipes[0], 0); //For stdin of second command, read from pipe[0]
+            if(debugIns){printf("Finished pipe stdin of [%d]\n", myPid);}
         }
         //Normally set stdin
         else if(exeIns.insList[0].stdin.type == TOFILE){
@@ -86,9 +93,10 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             dup2(fileDescriptor, 0);
         }   
         //Pipe stdout of first command into write end of pipe
-        if(pipeBool = true && exeIns.num > 1){
-            if(debugIns){printf("Pipe stdout of [%d] into pipes[1]: %d\n", myPid, pipes[1]);}
+        if(pipeBool == 1 && exeIns.num > 1){
+            if(debugIns){printf("Pipe stdout of [%d], command: %s into pipes[1]: %d\n", myPid, exeIns.insList[0], pipes[1]);}
             dup2(pipes[1], 1); //For stdout of first command, write to pipe[1]
+            if(debugIns){printf("Finished pipe stout of [%d]\n", myPid);}
         }
         else if(exeIns.insList[0].stdout.type == TOFILE){
             if(debugIns){printf("stdout file: %s\n", exeIns.insList[0].stdout.stdoutFileName);}
@@ -119,6 +127,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
         }
 
         //Execute child process (fork returns 0 in curPid)
+        if(debugIns){printf("Child: [%d] calls execvp\n", myPid);} 
         execvp(exeIns.insList[0].args[0], exeIns.insList[0].args);
         if(debugIns){printf("\ninstruction failed to execute\n");} //Fix (implemented): args needs to be null terminated
         

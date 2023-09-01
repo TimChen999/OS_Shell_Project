@@ -62,9 +62,11 @@ int main() {
 
         //Boolean determine whether to pipe
         bool pipeBool = false;
-        if(size > 1){pipeBool = true;}
+        if(size > 1){
+            pipeBool = true;
+        }
 
-        //Create pipe to pass as parameter
+        //Create pipe to pass as parameter (doing so allows the function to call itself without overriding pipe with new definition, allowing piping to work)
         int pipes[2] = {0,0};
 
         //One task in foreground, rest in background
