@@ -32,7 +32,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
     //-----------------------------------------------------------------------------------
     if (curPid > 0) { 
         myPid = getpid();
-        if(debugIns){printf("[%d] parent of [%d]\n", myPid, curPid);}
+        if(debugIns){printf("PARENT PROCESS: [%d] parent of [%d]\n", myPid, curPid);}
 
         //Status of child process
         int status; 
@@ -68,14 +68,17 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
     } else if (curPid == 0) { 
         //Data for child process
         myPid = getpid();
-        if(debugIns){printf("[%d] child, pipeBool %d, exeIns.num %d\n", myPid, pipeBool, exeIns.num);}
+        if(debugIns){printf("START CHILD PROCESS: [%d] INFO: pipeBool %d, exeIns.num %d\n", myPid, pipeBool, exeIns.num);}
 
         //Set dup/dup2 to change stdin/stdout/stderr, take piping into consideration
         //Pipe stdin of first command from read end of pipe
+        
         if(pipeBool == 1 && exeIns.num == 1){
-            if(debugIns){printf("Pipe stdin of [%d], command: %s into pipes[0]: %d\n", myPid, exeIns.insList[1], pipes[0]);}
+            printf("read pipe %d ", pipes[0]);
+            close(pipes[1]);
             dup2(pipes[0], 0); //For stdin of second command, read from pipe[0]
-            if(debugIns){printf("Finished pipe stdin of [%d]\n", myPid);}
+            close(pipes[0]);
+            printf("-pipe done\n ");
         }
         //Normally set stdin
         else if(exeIns.insList[0].stdin.type == TOFILE){
@@ -93,10 +96,13 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             dup2(fileDescriptor, 0);
         }   
         //Pipe stdout of first command into write end of pipe
+        
         if(pipeBool == 1 && exeIns.num > 1){
-            if(debugIns){printf("Pipe stdout of [%d], command: %s into pipes[1]: %d\n", myPid, exeIns.insList[0], pipes[1]);}
+            printf("write pipe %d ", pipes[1]);
+            close(pipes[0]);
             dup2(pipes[1], 1); //For stdout of first command, write to pipe[1]
-            if(debugIns){printf("Finished pipe stout of [%d]\n", myPid);}
+            close(pipes[1]);
+            printf("-pipe done\n ");
         }
         else if(exeIns.insList[0].stdout.type == TOFILE){
             if(debugIns){printf("stdout file: %s\n", exeIns.insList[0].stdout.stdoutFileName);}
