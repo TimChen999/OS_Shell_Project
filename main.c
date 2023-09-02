@@ -70,8 +70,14 @@ int main() {
         int pipes[2] = {0,0};
 
         //One task in foreground, rest in background
-        int a = executeInstructions(exeList, pipeBool, pipes);
+        if(valid){
+            int a = executeInstructions(exeList, pipeBool, pipes);
+        }
     }
     return 0;
 }
+
+//change: redirect takes priority over a pipe ls > text | cat results in ls outputting to text, cat ignored, only execute pipe instructions if stdin/out not set
+//tcsetgrp to set foreground background
+//set follow-fork-mode child
 
