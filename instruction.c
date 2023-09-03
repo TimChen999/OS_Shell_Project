@@ -36,17 +36,6 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
         //Status of child process
         int status; 
 
-        //Child process running
-        if(!exeIns.background){
-            //Wait for child process, set status WUNTRACED is set flag to wait
-            if(debugIns){printf("Wait for child\n");}
-            waitpid(curPid, &status, WUNTRACED); 
-        } else {
-            //Don't wait
-            if(debugIns){printf("No wait for child\n");}
-            waitpid(curPid, &status, WNOHANG); 
-        }
-
         //-----------------------------------------------------------------------------------
         //Fork second instruction for pipelining (if it exists)
         //-----------------------------------------------------------------------------------
@@ -152,6 +141,18 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 return -1;
             }
         }
+
+        //Child process running
+        if(!exeIns.background){
+            //Wait for child process, set status WUNTRACED is set flag to wait
+            if(debugIns){printf("Wait for child\n");}
+            waitpid(curPid, &status, WUNTRACED); 
+        } else {
+            //Don't wait
+            if(debugIns){printf("No wait for child\n");}
+            waitpid(curPid, &status, WNOHANG); 
+        }
+
 
         //Child process done 
         if(debugIns){printf("[%d] Child done\n", curPid);}
