@@ -66,6 +66,10 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 //Status of 2nd child process
                 int status2; 
 
+                //Close pipes (Parent doesn't need pipes)
+                close(pipes[0]);
+                close(pipes[1]);
+
                 //Child process running
                 if(!exeIns.background){
                     //Wait for child process, set status WUNTRACED is set flag to wait
@@ -88,6 +92,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 //Pipe stdin of first command from read end of pipe
                 if(pipeBool == 1){
                     printf("read pipe %d ", pipes[0]);
+                    close(pipes[1]);
                     dup2(pipes[0], 0); //For stdin of second command, read from pipe[0]
                     close(pipes[0]);
                     printf("-pipe done\n ");
@@ -181,6 +186,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
         //Pipe stdout of first command into write end of pipe (if pipelining)
         if(pipeBool == 1){
             printf("write pipe %d ", pipes[1]);
+            close(pipes[0]);
             dup2(pipes[1], 1); //For stdout of first command, write to pipe[1]
             close(pipes[1]);
             printf("-pipe done\n ");
@@ -230,3 +236,4 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 }
 
 //NOTE: ISSUE: second process executes before the first process. lets say for ls | cat, cat executes first and hangs, but ls executes and finishes, pipelining not successful since cat tries to read before ls writes
+//FIX FOUND: Closing pipes isn't transferred between parent and child, for each active thread, all pipes need to be closed at the end. Child1 closes read pipe (it writes stdout to pipe) and then write pipe after it writes, child2 closes write pipe (it reads from pipe into stdin) and then read pipe after it reads. After forking both children, parent closes both pipes to prevent hanging
