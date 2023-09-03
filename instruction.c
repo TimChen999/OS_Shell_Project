@@ -7,7 +7,6 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 
-//ISSUE: further explore piping with cat, ls | cat appears to hang (maybe some sort of deadlock?)
 bool debugIns = true;
 
 //Execute instructions
@@ -91,14 +90,14 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 
                 //Pipe stdin of first command from read end of pipe
                 if(pipeBool == 1){
-                    printf("read pipe %d ", pipes[0]);
-                    close(pipes[1]);
+                    if(debugIns){printf("read pipe %d ", pipes[0]);}
+                    close(pipes[1]); //Write not needed
                     dup2(pipes[0], 0); //For stdin of second command, read from pipe[0]
-                    close(pipes[0]);
-                    printf("-pipe done\n ");
+                    close(pipes[0]); //Read done
+                    if(debugIns){printf("-pipe done\n ");}
                 }
-                //Set stdin (no pipeline, may be due to overriding pipeline)
-                if(exeIns.insList[1].stdin.type == TOFILE){
+                //Set stdin
+                else if(exeIns.insList[1].stdin.type == TOFILE){
                     //Try to open file
                     if(open(exeIns.insList[1].stdin.stdinFileName, O_RDONLY) == -1){
                     //Return error, stdin file doesn't exist
@@ -113,7 +112,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                     dup2(fileDescriptor2, 0);
                 }
                 //Set stdout
-                else if(exeIns.insList[1].stdout.type == TOFILE){
+                if(exeIns.insList[1].stdout.type == TOFILE){
                     if(debugIns){printf("stdout file: %s\n", exeIns.insList[1].stdout.stdoutFileName);}
                     //Try to open file
                     if(open(exeIns.insList[1].stdout.stdoutFileName, O_RDONLY) == -1){
@@ -185,11 +184,11 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 
         //Pipe stdout of first command into write end of pipe (if pipelining)
         if(pipeBool == 1){
-            printf("write pipe %d ", pipes[1]);
-            close(pipes[0]);
+            if(debugIns){printf("write pipe %d ", pipes[1]);}
+            close(pipes[0]); //Read not needed
             dup2(pipes[1], 1); //For stdout of first command, write to pipe[1]
-            close(pipes[1]);
-            printf("-pipe done\n ");
+            close(pipes[1]); //Write done
+            if(debugIns){printf("-pipe done\n ");}
         }
         //Set stdout
         else if(exeIns.insList[0].stdout.type == TOFILE){

@@ -60,9 +60,9 @@ int main() {
         //List of processes to execute
         struct execution exeList = {insList, 0, size, background};
 
-        //Boolean determine whether to pipe
+        //Boolean determine whether to pipe (Make sure piping isnt overriden by redirection)
         bool pipeBool = false;
-        if(size > 1){
+        if((size > 1 && exeList.insList[0].stdout.type != TOFILE) &&exeList.insList[1].stdin.type != TOFILE){
             pipeBool = true;
         }
 
