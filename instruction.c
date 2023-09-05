@@ -34,9 +34,13 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
     if (curPid > 0) { 
         myPid = getpid();
         if(debugIns){printf("PARENT PROCESS: [%d] parent of [%d]\n", myPid, curPid);}
+        pid_t child1PID = curPid;
 
         //Status of child process
         int status; 
+
+        //Set  group PID for child, set global var if gpid done
+        setpgid(0, child1PID);
 
         //-----------------------------------------------------------------------------------
         //Fork second instruction for pipelining (if it exists)
@@ -67,7 +71,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                     waitpid(curPid2, &status2, WUNTRACED); 
                 } else {
                     //Don't wait
-                    if(debugIns){printf("No wait for child2\n");}
+                    if(debugIns){printf("No wait for child2\n");} //Instead of this, how to actually set process to background
                     waitpid(curPid2, &status2, WNOHANG); 
                 }
                 //Child process done 
@@ -76,6 +80,12 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             //Second Child process
             //-----------------------------------------------------------------------------------
             } else if (curPid2 == 0) {
+                //Add second child to group ID (use the first child's PID to add to group) 
+                setpgid(child1PID, child1PID); //(parameter of zero means current process, returns 0 on success, GPID = child 1 pid)
+
+                //Send to foreground
+                addJob(exeIns.num, child1PID, exeIns.background, false);  
+
                 myPid2 = getpid();
                 if(debugIns){printf("START CHILD PROCESS2: [%d] INFO: pipeBool %d, exeIns.num %d, command %s\n", myPid2, pipeBool, 1, exeIns.insList[1].args[0]);}
 
@@ -163,8 +173,10 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
     //Child process
     //-----------------------------------------------------------------------------------
     else if (curPid == 0) {
+    
     //Data for child process
-        myPid = getpid();
+    myPid = getpid();
+
         if(debugIns){printf("START CHILD PROCESS: [%d] INFO: pipeBool %d, exeIns.num %d, command %s\n", myPid, pipeBool, exeIns.num, exeIns.insList[0].args[0]);}
 
         //Set dup/dup2 to change stdin/stdout/stderr, take piping into consideration

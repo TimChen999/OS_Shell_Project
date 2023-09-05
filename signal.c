@@ -17,8 +17,8 @@ pid_t parentProcess;
 pid_t foregroundProcess[2]; 
 pid_t numForegroundProcess;
 
-//Can be a max of 2 background processes
-pid_t backgroundProcess[2]; 
+//Can be a max of 50 background processes
+pid_t backgroundProcess[50]; 
 pid_t numBackgroundProcess;
 
 int resetProcess(){

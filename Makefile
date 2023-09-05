@@ -1,5 +1,5 @@
 all:
-	gcc -w main.c parse.c parse.h instruction.c signal.c -lreadline -o yash -g 
+	gcc -w main.c parse.c parse.h instruction.c signal.c jobs.c -lreadline -o yash -g 
 
 #gcc main builds main, -lreadline gets readline library, -w ignores error, -o decides name of object file it generates
 #gcc -o goo gabagoo.c -g compiles gabagoo.c into goo.out

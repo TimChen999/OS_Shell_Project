@@ -21,7 +21,7 @@
 // "2>" is similar to ">" but takes stderr instead of stdout
 // Sign just tells you whether to replace stdin, stdout, or stderr which conveniently are 0, 1, 2. They basically just change what is the input or output. A command like cat has both input and output "<" and ">" just changes what is input (stdin) and output (stdout)
 
-bool debugMain = true;
+bool debugMain = false;
 
 //Main includes process for parsing
 //Parse commands to execvp, dont have to recognize all commands, fg bg are special case
@@ -61,9 +61,6 @@ int main() {
         //List of processes to execute
         struct execution exeList = {insList, 0, size, background};
 
-        //init signal
-        sigInit();
-
         //Boolean determine whether to pipe (Make sure piping isnt overriden by redirection)
         bool pipeBool = false;
         if((size > 1 && exeList.insList[0].stdout.type != TOFILE) && exeList.insList[1].stdin.type != TOFILE){
@@ -73,8 +70,9 @@ int main() {
         //Create pipe to pass as parameter (doing so allows the function to call itself without overriding pipe with new definition, allowing piping to work)
         int pipes[2] = {0,0};
 
-        //Reset Processes in signal.c
+        //init signal
         resetProcess();
+        sigInit();
 
         //One task in foreground, rest in background
         if(valid){
