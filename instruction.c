@@ -2,10 +2,12 @@
 #include <readline/readline.h>
 #include <stdbool.h>
 #include "parse.h"
+#include "signalHeader.h"
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <fcntl.h>
+#include <signal.h>
 
 bool debugIns = true;
 

@@ -2,6 +2,7 @@
 #include <readline/readline.h>
 #include <stdbool.h>
 #include "parse.h"
+#include "signalHeader.h"
 
 // Features
 // Stdin is what you type in the shell or what you redirect into it
@@ -60,14 +61,20 @@ int main() {
         //List of processes to execute
         struct execution exeList = {insList, 0, size, background};
 
+        //init signal
+        sigInit();
+
         //Boolean determine whether to pipe (Make sure piping isnt overriden by redirection)
         bool pipeBool = false;
-        if((size > 1 && exeList.insList[0].stdout.type != TOFILE) &&exeList.insList[1].stdin.type != TOFILE){
+        if((size > 1 && exeList.insList[0].stdout.type != TOFILE) && exeList.insList[1].stdin.type != TOFILE){
             pipeBool = true;
         }
 
         //Create pipe to pass as parameter (doing so allows the function to call itself without overriding pipe with new definition, allowing piping to work)
         int pipes[2] = {0,0};
+
+        //Reset Processes in signal.c
+        resetProcess();
 
         //One task in foreground, rest in background
         if(valid){

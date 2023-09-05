@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <readline/readline.h>
 #include <stdbool.h>
+
 //Contains structs for the main file
 
 //See if the stdin, stdout, or stderr should be a file, the console, or user input
