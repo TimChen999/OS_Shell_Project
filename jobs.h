@@ -14,15 +14,19 @@
 //Stores data about a job (can have one or two processes)
 struct job{
     int numChild;
-    pid_t process1; //Child process
-    pid_t process2;
+    pid_t process; //Child process
     bool background;
     bool stopped;
 };
+
+pid_t setForeground(pid_t pid);
 
 int initJobs();
 
 int addJob(int numChild, pid_t groupPID, bool background, bool stopped);
 
+int finishJob(pid_t groupPID);
+
+int setStopped(pid_t groupPID);
 
 

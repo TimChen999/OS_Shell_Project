@@ -47,14 +47,14 @@ int main() {
         struct instruction* insList = parseInput(input, &size, &valid, &background);
 
         //Debug at end of parse
-        printf("\nNumber of processes: %d", size);
+        if(debugMain){printf("\nNumber of processes: %d", size);}
         if(debugMain){printf("\nParse finished, Valid: %d\n", valid);}
         for(int i = 0; i < size && debugMain; i++){
-            printf("Index %d: Command: %s stdin: %s stdout: %s Args: ", (i), insList[i].command, insList[i].stdin.stdinFileName, insList[i].stdout.stdoutFileName);
+            if(debugMain){printf("Index %d: Command: %s stdin: %s stdout: %s Args: ", (i), insList[i].command, insList[i].stdin.stdinFileName, insList[i].stdout.stdoutFileName);}
             for(int j = 0; j < insList[i].numArgs; j++){
-                printf("%d: %s ", j, insList[i].args[j]);
+                if(debugMain){printf("%d: %s ", j, insList[i].args[j]);}
             }
-            printf("\n");
+            if(debugMain){printf("\n");}
         }
         if(debugMain){printf("\n");} 
 
@@ -72,17 +72,19 @@ int main() {
 
         //init signal
         resetProcess();
-        sigInit();
+        initInt(); //Signal handers are not inherited for children, create init for parent, so children will stop
+        initStop();
 
-        //One task in foreground, rest in background
+        //Execute fg/bg/jobs
+        
+
+        //Execute tasks
         if(valid){
             int a = executeInstructions(exeList, pipeBool, pipes);
         }
     }
     return 0;
 }
-
-//change: redirect takes priority over a pipe ls > text | cat results in ls outputting to text, cat ignored, only execute pipe instructions if stdin/out not set
 //tcsetgrp to set foreground background
 //set follow-fork-mode child
 

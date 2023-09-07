@@ -11,29 +11,36 @@
 
 bool debugIns = true;
 
-//Execute instructions
-//Executes max of 2 processes (first two entered)
+//Store parent PID
+pid_t parent;
+
+//Executes Instructions, max of 2 processes (first two entered)
 int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
     pid_t curPid = getpid(); 
+    parent = getpid();
     pid_t myPid;
     if(debugIns){printf("Execute %d Instructions, Current pid: %d\n", exeIns.num, curPid);}
+
+    //Set parent process for signal handler 
+    setParentProcess(parent);
 
     //use pipeline if needed (number of process > 1)
     if(exeIns.num > 1){
         pipe(pipes);
-        if(debugIns){printf("Make pipeline: pipes[0]: %d, pipes[1]: %d\n", pipes[0], pipes[1]);} //Only need to be done once, not done on second call of function
+        //if(debugIns){printf("Make pipeline: pipes[0]: %d, pipes[1]: %d\n", pipes[0], pipes[1]);} //Only need to be done once, not done on second call of function
     }
 
     //Fork command (If parent, curPid becomes child's pid, if child, curPid becomes zero)
     curPid = fork();
 
-    //If else condition for whether each thread is parent or child
     //-----------------------------------------------------------------------------------
     //Parent process (fork returns child pid value in curPid)
     //-----------------------------------------------------------------------------------
     if (curPid > 0) { 
         myPid = getpid();
         if(debugIns){printf("PARENT PROCESS: [%d] parent of [%d]\n", myPid, curPid);}
+
+        //Store value of child1's pid for future use
         pid_t child1PID = curPid;
 
         //Status of child process
@@ -41,6 +48,13 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 
         //Set  group PID for child, set global var if gpid done
         setpgid(0, child1PID);
+
+        //Send to foreground (no pipelining)
+        if(exeIns.num == 1){
+            setForeground(child1PID);
+            addForegroundProcess(child1PID);
+            addJob(exeIns.num, child1PID, exeIns.background, false);  
+        }
 
         //-----------------------------------------------------------------------------------
         //Fork second instruction for pipelining (if it exists)
@@ -81,9 +95,13 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             //-----------------------------------------------------------------------------------
             } else if (curPid2 == 0) {
                 //Add second child to group ID (use the first child's PID to add to group) 
-                setpgid(child1PID, child1PID); //(parameter of zero means current process, returns 0 on success, GPID = child 1 pid)
+                setpgid(child1PID, 0); //(parameter of zero means current process, returns 0 on success, GPID = child 1 pid)
 
                 //Send to foreground
+                setForeground(child1PID);
+                addForegroundProcess(child1PID);
+
+                //Add job to list
                 addJob(exeIns.num, child1PID, exeIns.background, false);  
 
                 myPid2 = getpid();
@@ -91,11 +109,11 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 
                 //Pipe stdin of first command from read end of pipe
                 if(pipeBool == 1){
-                    if(debugIns){printf("read pipe %d ", pipes[0]);}
+                    //if(debugIns){printf("read pipe %d ", pipes[0]);}
                     close(pipes[1]); //Write not needed
                     dup2(pipes[0], 0); //For stdin of second command, read from pipe[0]
                     close(pipes[0]); //Read done
-                    if(debugIns){printf("-pipe done\n ");}
+                    //if(debugIns){printf("-pipe done\n ");}
                 }
                 //Set stdin
                 else if(exeIns.insList[1].stdin.type == TOFILE){
@@ -114,7 +132,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 }
                 //Set stdout
                 if(exeIns.insList[1].stdout.type == TOFILE){
-                    if(debugIns){printf("stdout file: %s\n", exeIns.insList[1].stdout.stdoutFileName);}
+                    //if(debugIns){printf("stdout file: %s\n", exeIns.insList[1].stdout.stdoutFileName);}
                     //Try to open file
                     if(open(exeIns.insList[1].stdout.stdoutFileName, O_RDONLY) == -1){
                         //stdout file doesn't exist, create file
@@ -165,21 +183,23 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             waitpid(curPid, &status, WNOHANG); 
         }
 
-
+        
         //Child process done 
-        if(debugIns){printf("[%d] Child done\n", curPid);}
+        if(debugIns){printf("[%d] Child done, return to parent\n", curPid);}
+
+        //Set child to done list (Onlt if not stopped with SIGSTOP)
+        finishJob(child1PID);
+
+        //Return terminal command back to parent (ISSUE: calling this when parent is in background causes SIGTTOU)
+        setForeground(parent); 
     }
     //-----------------------------------------------------------------------------------
     //Child process
     //-----------------------------------------------------------------------------------
     else if (curPid == 0) {
-    
-    //Data for child process
-    myPid = getpid();
-
+        //Data for child process
+        myPid = getpid();
         if(debugIns){printf("START CHILD PROCESS: [%d] INFO: pipeBool %d, exeIns.num %d, command %s\n", myPid, pipeBool, exeIns.num, exeIns.insList[0].args[0]);}
-
-        //Set dup/dup2 to change stdin/stdout/stderr, take piping into consideration
         
         //Set stdin
         if(exeIns.insList[0].stdin.type == TOFILE){
@@ -199,15 +219,15 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 
         //Pipe stdout of first command into write end of pipe (if pipelining)
         if(pipeBool == 1){
-            if(debugIns){printf("write pipe %d ", pipes[1]);}
+            //if(debugIns){printf("write pipe %d ", pipes[1]);}
             close(pipes[0]); //Read not needed
             dup2(pipes[1], 1); //For stdout of first command, write to pipe[1]
             close(pipes[1]); //Write done
-            if(debugIns){printf("-pipe done\n ");}
+            //if(debugIns){printf("-pipe done\n ");}
         }
         //Set stdout
         else if(exeIns.insList[0].stdout.type == TOFILE){
-            if(debugIns){printf("stdout file: %s\n", exeIns.insList[0].stdout.stdoutFileName);}
+            //if(debugIns){printf("stdout file: %s\n", exeIns.insList[0].stdout.stdoutFileName);}
             //Try to open file
             if(open(exeIns.insList[0].stdout.stdoutFileName, O_RDONLY) == -1){
                 //stdout file doesn't exist, create file
@@ -248,6 +268,3 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
     
     return 0;
 }
-
-//NOTE: ISSUE: second process executes before the first process. lets say for ls | cat, cat executes first and hangs, but ls executes and finishes, pipelining not successful since cat tries to read before ls writes
-//FIX FOUND: Closing pipes isn't transferred between parent and child, for each active thread, all pipes need to be closed at the end. Child1 closes read pipe (it writes stdout to pipe) and then write pipe after it writes, child2 closes write pipe (it reads from pipe into stdin) and then read pipe after it reads. After forking both children, parent closes both pipes to prevent hanging

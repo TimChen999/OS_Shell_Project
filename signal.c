@@ -14,59 +14,63 @@ bool sigDebug = true;
 pid_t parentProcess; 
 
 //Can be a max of 2 foreground processes
-pid_t foregroundProcess[2]; 
-pid_t numForegroundProcess;
+pid_t foregroundProcess; 
 
-//Can be a max of 50 background processes
-pid_t backgroundProcess[50]; 
-pid_t numBackgroundProcess;
+//Whether signal was stopped before finishing
+bool stopped;
 
 int resetProcess(){
+    stopped = false;
     parentProcess = 0;
-    numForegroundProcess = 0;
-    numBackgroundProcess = 0;
-    foregroundProcess[0] = 0;
-    foregroundProcess[1] = 0;
-    backgroundProcess[0] = 0;
-    backgroundProcess[1] = 0;
+    foregroundProcess= 0;
 }
 
 int addForegroundProcess(pid_t processNumber){
-    foregroundProcess[numForegroundProcess] = processNumber;
-    numForegroundProcess++;
-}
-
-int addBackgroundProcess(pid_t processNumber){
-    backgroundProcess[numBackgroundProcess] = processNumber;
-    numBackgroundProcess++;
+    foregroundProcess = processNumber;
 }
 
 int setParentProcess(pid_t processNumber){
     parentProcess = processNumber;
 }
 
-//SIGINT handler
+//SIGINT handler (Stops currently running process by interrupting execvp)
 void sigintHandler(int signal){
-    //Stop foreground processes
-    if(numForegroundProcess == 1){
-        kill(foregroundProcess[0], SIGINT);
-        numForegroundProcess = 0;
-    }
-    else if(numForegroundProcess == 2){
-        
-        kill(foregroundProcess[0], SIGINT);
-        kill(foregroundProcess[1], SIGINT);
-        numForegroundProcess = 0;
-    }
+    kill(foregroundProcess, SIGINT);
+}
+
+//Getter/Setter for stop
+bool getStopped(){
+    return stopped;
+}
+
+void setStopped(bool stop){
+    stopped = stop;
 }
 
 //SIGSTOP handler (stops foreground command)
 void sigstopHandler(int signal){
-    //Requires job table, to be implemented
+    //Explicitly set foreground to parent (child processes should be under separate gpid)
+    kill(foregroundProcess, SIGSTOP);
+    setStopped(foregroundProcess);
+    //write(STDIN_FILENO, "SIGSTOP", sizeof("SIGSTOP"));
+    stopped = true;
+}
+
+//Handler when something from background tries to get terminal control
+void sigttouHandler(int signal){
+    //write(STDIN_FILENO, "SIGTTOU", sizeof("SIGTTOU"));
+    tcsetpgrp(STDOUT_FILENO, parentProcess);
 }
 
 //Init signals
-int sigInit(){
+int initInt(){
     signal(SIGINT, sigintHandler);
+}
+
+int initStop(){
     signal(SIGSTOP, sigstopHandler);
+}
+
+int initTtou(){
+    signal(SIGTTOU, sigttouHandler);
 }
