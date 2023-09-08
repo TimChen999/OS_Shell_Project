@@ -27,6 +27,7 @@ int addJob(int numChild, pid_t groupPID, bool background, bool stopped);
 
 int finishJob(pid_t groupPID);
 
-int setStopped(pid_t groupPID);
+int setStoppedJob(pid_t groupPID);
 
+int exeSpecialJob(char* cmd);
 

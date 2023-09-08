@@ -9,20 +9,22 @@
 #include <fcntl.h>
 #include <signal.h>
 
-bool debugIns = true;
+bool debugIns = false;
 
 //Store parent PID
-pid_t parent;
+pid_t parentPID;
+pid_t child2PID;
+pid_t child1PID;
 
 //Executes Instructions, max of 2 processes (first two entered)
 int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
     pid_t curPid = getpid(); 
-    parent = getpid();
+    parentPID = getpid();
     pid_t myPid;
     if(debugIns){printf("Execute %d Instructions, Current pid: %d\n", exeIns.num, curPid);}
 
     //Set parent process for signal handler 
-    setParentProcess(parent);
+    setParentProcess(parentPID);
 
     //use pipeline if needed (number of process > 1)
     if(exeIns.num > 1){
@@ -41,17 +43,14 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
         if(debugIns){printf("PARENT PROCESS: [%d] parent of [%d]\n", myPid, curPid);}
 
         //Store value of child1's pid for future use
-        pid_t child1PID = curPid;
-
-        //Status of child process
-        int status; 
+        child1PID = curPid; 
 
         //Set  group PID for child, set global var if gpid done
         setpgid(0, child1PID);
 
         //Send to foreground (no pipelining)
         if(exeIns.num == 1){
-            setForeground(child1PID);
+            //setForeground(child1PID);
             addForegroundProcess(child1PID);
             addJob(exeIns.num, child1PID, exeIns.background, false);  
         }
@@ -71,36 +70,16 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 myPid2 = getpid();
                 if(debugIns){printf("PARENT PROCESS 2: [%d] parent of [%d]\n", myPid2, curPid2);}
 
-                //Status of 2nd child process
-                int status2; 
+                //set second child PID
+                child2PID = curPid2;
 
                 //Close pipes (Parent doesn't need pipes)
                 close(pipes[0]);
                 close(pipes[1]);
-
-                //Child process running
-                if(!exeIns.background){
-                    //Wait for child process, set status WUNTRACED is set flag to wait
-                    if(debugIns){printf("Wait for child2\n");}
-                    waitpid(curPid2, &status2, WUNTRACED); 
-                } else {
-                    //Don't wait
-                    if(debugIns){printf("No wait for child2\n");} //Instead of this, how to actually set process to background
-                    waitpid(curPid2, &status2, WNOHANG); 
-                }
-                //Child process done 
-                if(debugIns){printf("[%d] Child2 done\n", curPid2);}
             //-----------------------------------------------------------------------------------
             //Second Child process
             //-----------------------------------------------------------------------------------
             } else if (curPid2 == 0) {
-                //Add second child to group ID (use the first child's PID to add to group) 
-                setpgid(child1PID, 0); //(parameter of zero means current process, returns 0 on success, GPID = child 1 pid)
-
-                //Send to foreground
-                setForeground(child1PID);
-                addForegroundProcess(child1PID);
-
                 //Add job to list
                 addJob(exeIns.num, child1PID, exeIns.background, false);  
 
@@ -172,26 +151,54 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             }
         }
 
+        //-----------------------------------------------------------------------------------
+        //End of second child, back to parent
+        //-----------------------------------------------------------------------------------
+
+        //Add second child to group ID (use the first child's PID to add to group) 
+        setpgid(child2PID, child1PID); //(parameter of zero means current process, returns 0 on success, GPID = child 1 pid)
+
+        //Send to foreground
+        setForeground(child1PID);
+        addForegroundProcess(child1PID);
+
+        //Status of child process
+        int status;
+
+        //Status of 2nd child process
+        int status2; 
+
         //Child process running
         if(!exeIns.background){
             //Wait for child process, set status WUNTRACED is set flag to wait
+            if(debugIns){printf("Wait for child2\n");}
+            waitpid(child2PID, &status2, WUNTRACED); 
+        } else {
+            //Don't wait
+            if(debugIns){printf("No wait for child2\n");} //Instead of this, how to actually set process to background
+            waitpid(child2PID, &status2, WNOHANG); 
+        }
+        //Child process done 
+        if(debugIns){printf("[%d] Child2 done\n", child2PID);}
+
+        if(!exeIns.background){
+            //Wait for child process, set status WUNTRACED is set flag to wait
             if(debugIns){printf("Wait for child\n");}
-            waitpid(curPid, &status, WUNTRACED); 
+            waitpid(child1PID, &status, WUNTRACED); 
         } else {
             //Don't wait
             if(debugIns){printf("No wait for child\n");}
-            waitpid(curPid, &status, WNOHANG); 
+            waitpid(child1PID, &status, WNOHANG); 
         }
 
+        //Return terminal command back to parent (ISSUE: calling this when parent is in background causes SIGTTOU)
+        setForeground(parentPID); 
         
         //Child process done 
-        if(debugIns){printf("[%d] Child done, return to parent\n", curPid);}
+        if(debugIns){printf("[%d] Child done, return to parent\n", child1PID);}
 
         //Set child to done list (Onlt if not stopped with SIGSTOP)
         finishJob(child1PID);
-
-        //Return terminal command back to parent (ISSUE: calling this when parent is in background causes SIGTTOU)
-        setForeground(parent); 
     }
     //-----------------------------------------------------------------------------------
     //Child process

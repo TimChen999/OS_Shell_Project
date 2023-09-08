@@ -3,6 +3,7 @@
 #include <stdbool.h>
 #include "parse.h"
 #include "signalHeader.h"
+#include "jobs.h"
 
 // Features
 // Stdin is what you type in the shell or what you redirect into it
@@ -74,12 +75,16 @@ int main() {
         resetProcess();
         initInt(); //Signal handers are not inherited for children, create init for parent, so children will stop
         initStop();
+        signal(SIGTTOU, SIG_IGN); //Ignore the signal that causes issues when parent tries to regain control
 
-        //Execute fg/bg/jobs
-        
+        //Execute fg/bg/jobs, special tasks
+        char* cmd = exeList.insList[0].command;
+        if((strcmp(cmd, "fg") == 0 || strcmp(cmd, "bg") == 0) || strcmp(cmd, "job") == 0){
+            exeSpecialJob(cmd);
+        }
 
         //Execute tasks
-        if(valid){
+        else if(valid){
             int a = executeInstructions(exeList, pipeBool, pipes);
         }
     }

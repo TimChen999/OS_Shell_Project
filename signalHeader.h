@@ -27,7 +27,7 @@ int initStop();
 
 int initTtou();
 
-bool getStopped();
+bool getSignalStopped();
 
-void setStopped(bool stop);
+void setSignalStopped(bool stop);
 

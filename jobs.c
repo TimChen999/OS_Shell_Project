@@ -7,8 +7,9 @@
 #include <fcntl.h>
 #include <signal.h>
 #include "jobs.h"
+#include "parse.h" //Dont call headers in headers
 
-bool debugJob = true;
+bool debugJob = false;
 
 struct job jobList[20]; //active
 struct job finished[200]; //done
@@ -38,9 +39,9 @@ int addJob(int numChild, pid_t groupPID, bool background, bool stopped){
 //Job done, remove from active job list
 int finishJob(pid_t groupPID){
     //Process is stopped, return handler
-    if(getStopped()){
+    if(getSignalStopped()){
         if(debugJob){printf("\nStop Job GPID: %d\n", groupPID);}
-        setStopped(false);
+        setSignalStopped(false);
         return 1;
     }
 
@@ -66,7 +67,7 @@ int finishJob(pid_t groupPID){
 }
 
 //Track stopped job
-int setStopped(pid_t groupPID){
+int setStoppedJob(pid_t groupPID){
     for(int i = 0; i < numJobs; i++){
         if(jobList[i].process == groupPID){
             if(debugJob){printf("Stop: %d", groupPID);}
@@ -152,24 +153,26 @@ int resumeRecentInBack(){
 }
 
 //Execute fg/bg/jobs (for these, the command itself is not added as an arg)
-int exeJob(struct execution exeIns){
+int exeSpecialJob(char* cmd){
     //FG
-    if(strcmp(exeIns.insList[0].command, "fg") == 0){
+    if(strcmp(cmd, "fg") == 0){
         //Foreground
-        if(debugJob){printf("Job: fg");}
+        if(debugJob){printf("\nJob: fg\n");}
         return sendRecentToFore();
     }
 
     //BG
-    if(strcmp(exeIns.insList[0].command, "bg") == 0){
+    if(strcmp(cmd, "bg") == 0){
         //Background
-        if(debugJob){printf("Job: bg");}
+        if(debugJob){printf("\nJob: bg\n");}
         return resumeRecentInBack();
     }
 
     //Jobs
-    if(strcmp(exeIns.insList[0].command, "jobs") == 0){
+    if(strcmp(cmd, "jobs") == 0){
         //Print jobs
+        if(debugJob){printf("\nJob: jobs\n");}
+
     }
 
     return 1;
