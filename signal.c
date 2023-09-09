@@ -7,8 +7,9 @@
 #include <fcntl.h>
 #include <signal.h>
 #include "signalHeader.h"
+#include "jobs.h"
 
-bool sigDebug = false;
+bool sigDebug = true;
 
 //Parent progress
 pid_t parentProcess; 
@@ -25,35 +26,19 @@ int resetProcess(){
     foregroundProcess= 0;
 }
 
-int addForegroundProcess(pid_t processNumber){
+int setForegroundProcess(pid_t processNumber){
+    if(sigDebug){printf("SIGNAL.C: set foreground [%d]\n", processNumber);}
     foregroundProcess = processNumber;
 }
 
 int setParentProcess(pid_t processNumber){
+    if(sigDebug){printf("SIGNAL.C: set parent [%d]\n", processNumber);}
     parentProcess = processNumber;
 }
 
 //SIGINT handler (Stops currently running process by interrupting execvp)
 void sigintHandler(int signal){
-    //kill(foregroundProcess, SIGINT);
-}
 
-//Getter/Setter for stop
-bool getSignalStopped(){
-    return stopped;
-}
-
-void setSignalStopped(bool stop){
-    stopped = stop;
-}
-
-//SIGSTOP handler (stops foreground command)
-void sigstopHandler(int signal){
-    //Explicitly set foreground to parent (child processes should be under separate gpid)
-    setStoppedJob(foregroundProcess);
-    kill(foregroundProcess, SIGSTOP);
-    //write(STDIN_FILENO, "SIGSTOP", sizeof("SIGSTOP"));
-    stopped = true;
 }
 
 //Handler when something from background tries to get terminal control
@@ -61,15 +46,23 @@ void sigttouHandler(int signal){
     
 }
 
-//Init signals
-int initInt(){
-    signal(SIGINT, sigintHandler);
+//SIGSTOP handler (stops foreground command)
+void sigtstpHandler(int signal){
+    
 }
 
-int initStop(){
-    signal(SIGSTOP, sigstopHandler);
+//SIGCHILD handler
+void sigChildHandler(int signal){
+    pid_t pidCh;
+    int status;
+
+    //Get pid of any reaped children
+    pidCh = waitpid(-1, &status, WNOHANG);
+
+    //Continue reaping children while there are children to reap
+    while(pidCh > 0){
+        reapChild(pidCh);
+        pidCh = waitpid(-1, &status, WNOHANG);
+    }
 }
 
-int initTtou(){
-    signal(SIGTTOU, sigttouHandler);
-}

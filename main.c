@@ -4,6 +4,8 @@
 #include "parse.h"
 #include "signalHeader.h"
 #include "jobs.h"
+#include <unistd.h>
+
 
 // Features
 // Stdin is what you type in the shell or what you redirect into it
@@ -22,6 +24,7 @@
 // "2>" is similar to ">" but takes stderr instead of stdout
 // Sign just tells you whether to replace stdin, stdout, or stderr which conveniently are 0, 1, 2. They basically just change what is the input or output. A command like cat has both input and output "<" and ">" just changes what is input (stdin) and output (stdout)
 
+//Jobs: foreground, background, jobs command
 bool debugMain = false;
 
 //Main includes process for parsing
@@ -29,6 +32,13 @@ bool debugMain = false;
 int main() {
     if(debugMain){printf("Polling for input:\n");}
     while(1){
+        //init signal
+        initJobs();
+        signal(SIGINT, SIG_IGN); //Ignore sig int for parent
+        signal(SIGTSTP, SIG_IGN); //Ignore sig tstp for parent
+        signal(SIGTTOU, SIG_IGN); //Ignore this everywhere
+        signal(SIGCHLD, sigChildHandler); //SIGCHILD handler
+
         //New input var for new line of input
         char* input = (char *)malloc(sizeof(char) * 2000); //last byte of string is null
 
@@ -71,18 +81,11 @@ int main() {
         //Create pipe to pass as parameter (doing so allows the function to call itself without overriding pipe with new definition, allowing piping to work)
         int pipes[2] = {0,0};
 
-        //init signal
-        resetProcess();
-        initInt(); //Signal handers are not inherited for children, create init for parent, so children will stop
-        initStop();
-        signal(SIGTTOU, SIG_IGN); //Ignore the signal that causes issues when parent tries to regain control
-
         //Execute fg/bg/jobs, special tasks
         char* cmd = exeList.insList[0].command;
-        if((strcmp(cmd, "fg") == 0 || strcmp(cmd, "bg") == 0) || strcmp(cmd, "job") == 0){
+        if((strcmp(cmd, "fg") == 0 || strcmp(cmd, "bg") == 0) || strcmp(cmd, "jobs") == 0){
             exeSpecialJob(cmd);
         }
-
         //Execute tasks
         else if(valid){
             int a = executeInstructions(exeList, pipeBool, pipes);

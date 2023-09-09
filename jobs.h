@@ -11,10 +11,13 @@
 
 //Whether a job is foreground or background. inctruction should call jobs, which tracks the job. Jobs should also call signal.c to move jobs to foreground and background
 
-//Stores data about a job (can have one or two processes)
+//Stores data about a job (can have one or two processes) (ADD: keep track of args)
 struct job{
     int numChild;
-    pid_t process; //Child process
+    pid_t process1; //Child process
+    pid_t process2;
+    char** c1Args;
+    char** c2Args;
     bool background;
     bool stopped;
 };
@@ -23,11 +26,15 @@ pid_t setForeground(pid_t pid);
 
 int initJobs();
 
-int addJob(int numChild, pid_t groupPID, bool background, bool stopped);
+int addJob(int numChild, pid_t pid1, pid_t pid2, char** args1, char** args2, bool background, bool stopped);
 
-int finishJob(pid_t groupPID);
-
-int setStoppedJob(pid_t groupPID);
+int finishJob(pid_t pid1, int signal);
 
 int exeSpecialJob(char* cmd);
+
+int mostRecentStopped();
+
+int setStopped();
+
+int reapChild(pid_t pid);
 

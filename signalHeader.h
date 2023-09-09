@@ -9,25 +9,15 @@
 
 void sigintHandler(int signal);
 
-void sigstopHandler(int signal);
+void sigtstpHandler(int signal);
 
 void sigttouHandler(int signal);
 
+void sigChildHandler(int signal);
+
 int resetProcess();
 
-int addForegroundProcess(pid_t processNumber);
-
-int addBackgroundProcess(pid_t processNumber);
+int setForegroundProcess(pid_t processNumber);
 
 int setParentProcess(pid_t processNumber);
-
-int sigInit();
-
-int initStop();
-
-int initTtou();
-
-bool getSignalStopped();
-
-void setSignalStopped(bool stop);
 
