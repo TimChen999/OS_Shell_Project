@@ -77,12 +77,16 @@ int initJobs(){
 
 //Add job to active job list
 int addJob(int numChild, pid_t pid1, pid_t pid2, char** args1, char** args2, bool background, bool stopped){
-    if(debugJob){printf("JOBS.C: Add Job PID: [%d][%d]\n", pid1, pid2);}
+    if(debugJob){printf("JOBS.C: Add Job PID: [%d][%d], numChild: %d ", pid1, pid2, numChild);}
 
     //Create new job with the params
     struct job curr = {numChild, pid1, pid2, args1, args2, background, stopped};
+
+    if(debugJob){printf("Add Job done, numJobs %d ", numJobs);}
     jobList[numJobs] = curr;
     numJobs++;
+
+    if(debugJob){printf("--> %d\n ", numJobs);}
 
     return 0;
 }
@@ -93,7 +97,7 @@ int finishJob(pid_t pid1, int signal){
 
     //Recieved SIGTSTP, don't terminate process but set to background and stop
     if(signal == SIGTSTP){
-        if(debugJob){printf("JOBS.C: Stop Job GPID: %d\n", pid1);}
+        if(debugJob){printf("JOBS.C: Stop Job GPID: %d num: %d\n", pid1, numJobs);}
         setStopped(pid1);
         setBackground(pid1);
         return -1;
@@ -146,7 +150,7 @@ int mostRecentStopped(){
     }
 
     //Newline
-    if(debugJob){printf("\n");}
+    if(debugJob){printf(" \n");}
 
     //None found
     return -1;
@@ -154,6 +158,7 @@ int mostRecentStopped(){
 
 //Set job to stopped, keeps track of stopped jobs
 int setStopped(pid_t pid){
+    if(debugJob){printf("JOBS.C: Set stopped: look for [%d] in size %d \n", pid, numJobs);}
     for(int i = 0; i < numJobs; i++){
         if(pid == jobList[i].process1){
             if(debugJob){printf("JOBS.C: Set stopped: [%d] at index %d \n", pid, i);}
@@ -164,6 +169,7 @@ int setStopped(pid_t pid){
 
 //Set job to background, keeps track of background jobs
 int setBackground(pid_t pid){
+    if(debugJob){printf("JOBS.C: Set stopped: look for [%d] in size %d \n", pid, numJobs);}
     for(int i = 0; i < numJobs; i++){
         if(pid == jobList[i].process1){
             if(debugJob){printf("JOBS.C: Set background: [%d] at index %d \n", pid, i);}
@@ -202,7 +208,7 @@ int exeSpecialJob(char* cmd){
     //Jobs
     if(strcmp(cmd, "jobs") == 0){
         //Print jobs
-        if(debugJob){printf("Job: jobs\n");}
+        if(debugJob){printf("Job: %d jobs\n", numJobs);}
         for(int i = 0; i < numJobs; i++){
             //Print each job
             printf("Active Job: %s Stopped: %d Background: %d\n",jobList[i].c1Args[0], jobList[i].stopped, jobList[i].background);

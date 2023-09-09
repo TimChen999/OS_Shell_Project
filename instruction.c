@@ -10,7 +10,7 @@
 #include <signal.h>
 #include "signal.h"
 
-bool debugIns = true;
+bool debugIns = false;
 
 //Store parent PID
 pid_t parentPID;
@@ -63,8 +63,11 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 myPid2 = getpid();
                 if(debugIns){printf("PARENT PROCESS: [%d] parent of [%d]\n", myPid2, curPid2);}
 
-                //set second child PID
+                //Set child2 pid
                 child2PID = curPid2;
+
+                //Add job to list (2 children) has to be done in parent or values will not transfer
+                addJob(exeIns.num, child1PID, child2PID, exeIns.insList[0].args, exeIns.insList[1].args, exeIns.background, false); 
 
                 //Close pipes (Parent doesn't need pipes)
                 close(pipes[0]);
@@ -77,8 +80,8 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 signal(SIGINT, SIG_DFL); 
                 signal(SIGTSTP, SIG_DFL);
 
-                //Add job to list (2 children)
-                addJob(exeIns.num, child1PID, child2PID, exeIns.insList[0].args, exeIns.insList[1].args, exeIns.background, false);  
+                //set second child PID
+                child2PID = getpid(); 
 
                 myPid2 = getpid();
                 if(debugIns){printf("CHILD PROCESS2: [%d] INFO: pipeBool %d, exeIns.num %d, command %s\n", myPid2, pipeBool, 1, exeIns.insList[1].args[0]);}
