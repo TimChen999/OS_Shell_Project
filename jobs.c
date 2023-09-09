@@ -144,7 +144,7 @@ int mostRecentStopped(){
     //Find most recent
     for(int i = numJobs; i >= 0; i--){
         if(jobList[i].stopped == true && jobList[i].background == true){
-            if(debugJob){printf("%d", i);}
+            if(debugJob){printf("%d\n", i);}
             return i;
         }
     }
@@ -188,6 +188,50 @@ int exeBg(){
     kill(jobList[recent].process2, SIGCONT);
 }
 
+//Execute the "fg" instruction 
+int exeFg(){
+    int recent = 99;
+    recent = mostRecentStopped();
+    jobList[recent].stopped = false;
+    jobList[recent].background = false;
+
+    //No processes found
+    if(recent == 99){return -1;}
+
+    //Found recent command
+    if(debugJob){printf("JOBS.C: exeFg() found recent command: ");}
+
+    struct job fgJob = jobList[recent];
+
+    int status;
+
+    //Current pid to give back terminal control
+    pid_t currentPID = getpid();
+
+    //Continue the process in foreground
+    //One child, give temporary terminal control
+    if(fgJob.numChild == 1){
+        if(debugJob){printf("1 child [%d]\n", fgJob.process1);}
+        kill(fgJob.process1, SIGCONT);
+        tcsetpgrp(STDIN_FILENO, fgJob.process1);
+        waitpid(fgJob.process1, &status, WUNTRACED); 
+        tcsetpgrp(STDIN_FILENO, currentPID);
+    }
+    //2 Children pipeline
+    else{
+        if(debugJob){printf("2 children [%d][%d]\n", fgJob.process1, fgJob.process2);}
+        //Group children together
+        setpgid(fgJob.process1, fgJob.process1);
+        setpgid(fgJob.process2, fgJob.process1);
+
+        //Execute code
+        kill(fgJob.process1, SIGCONT);
+        tcsetpgrp(STDIN_FILENO, fgJob.process1);
+        waitpid(fgJob.process1, &status, WUNTRACED); 
+        tcsetpgrp(STDIN_FILENO, currentPID);
+    }  
+}
+
 //Execute fg/bg/jobs (for these, the command itself is not added as an arg)
 int exeSpecialJob(char* cmd){
     //FG
@@ -195,6 +239,7 @@ int exeSpecialJob(char* cmd){
         //Foreground
         if(debugJob){printf("Job: fg\n");}
         //Implement
+        exeFg();
     }
 
     //BG
