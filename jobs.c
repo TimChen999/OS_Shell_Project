@@ -198,7 +198,7 @@ int exeBg(){
     kill(jobList[recent].process2, SIGCONT);
 }
 
-//Execute the "fg" instruction (ISSUE: If a long background command is entered and then a short background command is entered, calling fg will take the most recent short command's ID and immediately finish, but will also remove the long job from job list. Error is likely in mostRecentStopped() getting wrong index)
+//Execute the "fg" instruction 
 int exeFg(){
     int recent = -1;
     recent = mostRecentStopped();
