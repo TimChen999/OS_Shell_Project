@@ -12,31 +12,35 @@
 bool debugJob = true;
 
 //Global vars
-struct job jobList[20]; //active
-struct job finished[200]; //done
-pid_t foreground;
-int numJobs;
-int numFinished;
-bool jobsInitialized = false;
+static struct job jobList[20]; //active
+static struct job finished[200]; //done
+static pid_t foreground;
+static int numJobs;
+static int numFinished;
+static bool jobsInitialized = false;
+
+//Keeps track of jobNumber, each job has unique number
+static int jobNumber;
 
 //Array of PIDs from SIGCHILD handler, whenever two pids within the list match the two pids of a job, remove the job
-pid_t reapedPIDs[500];
-int numReaped;
+static pid_t reapedPIDs[500];
+static int numReaped;
 
 //Adds PID to reaped PID list and test if any job can be removed
 int reapChild(pid_t pid){
-    if(debugJob){printf("JOBS.C: Reap child called: PID: %d numJobs:", pid);}
-    if(debugJob){printf(" %d numReaped: %d\n", numJobs, numReaped);}
+    if(debugJob){printf("JOBS.C reapChild(pid_t pid): Reap child called: PID: %d numJobs:", pid);}
 
     reapedPIDs[numReaped] = pid;
     numReaped++;
+
+    if(debugJob){printf(" %d numReaped: %d\n", numJobs, numReaped);}
 
     //check if any job PIDs can be reaped (1 child)
     for(int i = 0; i < numReaped; i++){
         for(int x = 0; x < numJobs; x++){
             //Matching PID found
             if(reapedPIDs[i] == jobList[x].process1 && jobList[x].process2 == 0){
-                if(debugJob){printf("JOBS.C: Reap job p1 [%d] p2 [0]\n", jobList[x].process1);}
+                if(debugJob){printf("JOBS.C reapChild(pid_t pid): Reap job p1 [%d] p2 [0]\n", jobList[x].process1);}
                 finishJob(jobList[x].process1, 99);
             }
         }       
@@ -49,11 +53,11 @@ int reapChild(pid_t pid){
             for(int x = 0; x < numJobs; x++){
                 //Matching PIDs found (2 children)
                 if(reapedPIDs[i] == jobList[x].process1 && reapedPIDs[j] == jobList[x].process2){
-                    if(debugJob){printf("JOBS.C: Reap job p1 [%s] p2 [%s]\n", jobList[x].process1, jobList[x].process2);}
+                    if(debugJob){printf("JOBS.C reapChild(pid_t pid): Reap job p1 [%d] p2 [%d]\n", jobList[x].process1, jobList[x].process2);}
                     finishJob(jobList[x].process1, 99);
                 }
                 else if(reapedPIDs[i] == jobList[x].process2 && reapedPIDs[j] == jobList[x].process1){
-                    if(debugJob){printf("JOBS.C: Reap job p1 [%s] p2 [%s]\n", jobList[x].process1, jobList[x].process2);}
+                    if(debugJob){printf("JOBS.C reapChild(pid_t pid): Reap job p1 [%d] p2 [%d]\n", jobList[x].process1, jobList[x].process2);}
                     finishJob(jobList[x].process1, 99);
                 }
             }
@@ -71,17 +75,20 @@ int initJobs(){
         numFinished = 0;
         numReaped = 0;
         jobsInitialized = true;
+        jobNumber = 0;
     }
     return 0;
 }
 
 //Add job to active job list
 int addJob(int numChild, pid_t pid1, pid_t pid2, char** args1, char** args2, bool background, bool stopped){
-    if(debugJob){printf("JOBS.C: Add Job PID: [%d][%d], numChild: %d ", pid1, pid2, numChild);}
+    if(debugJob){printf("JOBS.C addJob(): Add Job PID: [%d][%d], numChild: %d ", pid1, pid2, numChild);}
 
     //Create new job with the params
-    struct job curr = {numChild, pid1, pid2, args1, args2, background, stopped};
+    struct job curr = {numChild, pid1, pid2, args1, args2, background, stopped, jobNumber};
+    jobNumber++;
 
+    //Add created job to local jobs list
     if(debugJob){printf("Add Job done, numJobs %d ", numJobs);}
     jobList[numJobs] = curr;
     numJobs++;
@@ -93,22 +100,22 @@ int addJob(int numChild, pid_t pid1, pid_t pid2, char** args1, char** args2, boo
 
 //Job done, remove from active job list
 int finishJob(pid_t pid1, int signal){
-    if(debugJob){printf("JOBS.C: Child finished signal: %d\n", signal);}
+    if(debugJob){printf("JOBS.C finishJob(): Child finished signal: %d ", signal);}
 
-    //Recieved SIGTSTP, don't terminate process but set to background and stop
+    //Recieved signal, don't terminate process but set to background and stop
     if(signal == SIGTSTP){
-        if(debugJob){printf("JOBS.C: Stop Job GPID: %d num: %d\n", pid1, numJobs);}
+        if(debugJob){printf(" Stop Job GPID: %d num: %d \n", pid1, numJobs);}
         setStopped(pid1);
         setBackground(pid1);
         return -1;
     }
 
     //Process not stopped
-    if(debugJob){printf("JOBS.C: Finish Job GPID: %d\n", pid1);}
+    if(debugJob){printf(" finishJob(): Finish Job GPID: %d ", pid1);}
     int index = 0; //Index of removed job
     for(int i = 0; i < numJobs; i++){
         if(jobList[i].process1 == pid1){
-            if(debugJob){printf("JOBS.C: Remove: %d\n", pid1);}
+            if(debugJob){printf("call finishJob() ", pid1);}
             //Finish job, add to finished list
             finished[numFinished] = jobList[i];
             numFinished++;
@@ -117,11 +124,14 @@ int finishJob(pid_t pid1, int signal){
     }
 
     //Move all elements down one
+    if(debugJob){printf("remove index: %d ", index);}
     index++;
     for(; index < numJobs; index++){
         jobList[index - 1] = jobList[index];
     }
+    if(debugJob){printf("num jobs: %d --> ", numJobs);}
     numJobs--;
+    if(debugJob){printf("%d\n", numJobs);}
     return 0;
 }
 
@@ -129,28 +139,28 @@ int finishJob(pid_t pid1, int signal){
 pid_t setForeground(pid_t pid){
     //Test, get groupid of terminal, set to foreground (Plan: do this in a separate function which takes in a groupID as parameter)
     pid_t foregroundProcess = tcgetpgrp(STDIN_FILENO);
-    if(debugJob){printf("JOBS.C: Foreground Job GPID: %d\n", foregroundProcess);}
+    if(debugJob){printf("JOBS.C setForeground(pid_t pid): Foreground Job GPID: %d\n", foregroundProcess);}
     if(tcsetpgrp(STDOUT_FILENO, pid) != 0){
         if(debugJob){printf("Set GPID fail\n");}
     }
     foregroundProcess = tcgetpgrp(STDIN_FILENO);
-    if(debugJob){printf("JOBS.C: New foreground Job GPID: %d\n", foregroundProcess);}
+    if(debugJob){printf("JOBS.C setForeground(pid_t pid): New foreground Job GPID: %d\n", foregroundProcess);}
 }
 
 //Find index of most recent background or stopped process
 int mostRecentStopped(){
-    if(debugJob){printf("JOBS.C: Find most recent stopped: ");}
+    if(debugJob){printf("JOBS.C mostRecentStopped(): Find most recent stopped: ");}
 
     //Find most recent
-    for(int i = numJobs; i >= 0; i--){
-        if(jobList[i].stopped == true && jobList[i].background == true){
+    for(int i = numJobs - 1; i >= 0; i--){
+        if(jobList[i].stopped == true || jobList[i].background == true){
             if(debugJob){printf("%d\n", i);}
             return i;
         }
     }
 
     //Newline
-    if(debugJob){printf(" \n");}
+    if(debugJob){printf(" not found \n");}
 
     //None found
     return -1;
@@ -158,10 +168,10 @@ int mostRecentStopped(){
 
 //Set job to stopped, keeps track of stopped jobs
 int setStopped(pid_t pid){
-    if(debugJob){printf("JOBS.C: Set stopped: look for [%d] in size %d \n", pid, numJobs);}
+    if(debugJob){printf("JOBS.C setStopped(pid_t pid): Set stopped: look for [%d] in size %d \n", pid, numJobs);}
     for(int i = 0; i < numJobs; i++){
         if(pid == jobList[i].process1){
-            if(debugJob){printf("JOBS.C: Set stopped: [%d] at index %d \n", pid, i);}
+            if(debugJob){printf("JOBS.C setStopped(pid_t pid): Set stopped: [%d] at index %d \n", pid, i);}
             jobList[i].stopped = true;
         }
     }
@@ -169,10 +179,10 @@ int setStopped(pid_t pid){
 
 //Set job to background, keeps track of background jobs
 int setBackground(pid_t pid){
-    if(debugJob){printf("JOBS.C: Set stopped: look for [%d] in size %d \n", pid, numJobs);}
+    if(debugJob){printf("JOBS.C: Set stopped setBackground(pid_t pid): look for [%d] in size %d \n", pid, numJobs);}
     for(int i = 0; i < numJobs; i++){
         if(pid == jobList[i].process1){
-            if(debugJob){printf("JOBS.C: Set background: [%d] at index %d \n", pid, i);}
+            if(debugJob){printf("JOBS.C setBackground(pid_t pid): Set background: [%d] at index %d \n", pid, i);}
             jobList[i].background = true;
         }
     }
@@ -188,47 +198,82 @@ int exeBg(){
     kill(jobList[recent].process2, SIGCONT);
 }
 
-//Execute the "fg" instruction 
+//Execute the "fg" instruction (ISSUE: If a long background command is entered and then a short background command is entered, calling fg will take the most recent short command's ID and immediately finish, but will also remove the long job from job list. Error is likely in mostRecentStopped() getting wrong index)
 int exeFg(){
-    int recent = 99;
+    int recent = -1;
     recent = mostRecentStopped();
     jobList[recent].stopped = false;
     jobList[recent].background = false;
 
     //No processes found
-    if(recent == 99){return -1;}
+    if(recent == -1){return -1;}
 
     //Found recent command
-    if(debugJob){printf("JOBS.C: exeFg() found recent command: ");}
+    if(debugJob){printf("JOBS.C exeFg(): found recent command: Index: %d Children: ", recent);}
 
-    struct job fgJob = jobList[recent];
+    //Get processes of recent job
+    pid_t process1 = jobList[recent].process1;
+    pid_t process2 = jobList[recent].process2;
 
     int status;
+    int status2;
 
     //Current pid to give back terminal control
     pid_t currentPID = getpid();
 
     //Continue the process in foreground
     //One child, give temporary terminal control
-    if(fgJob.numChild == 1){
-        if(debugJob){printf("1 child [%d]\n", fgJob.process1);}
-        kill(fgJob.process1, SIGCONT);
-        tcsetpgrp(STDIN_FILENO, fgJob.process1);
-        waitpid(fgJob.process1, &status, WUNTRACED); 
+    if(jobList[recent].numChild == 1){
+        if(debugJob){printf("1 child [%d]\n", process1);}
+        //Set process id to parent id group
+        setpgid(currentPID, currentPID);
+        setpgid(process1, currentPID);
+
+        //Execute instruction
+        kill(process1, SIGCONT);
         tcsetpgrp(STDIN_FILENO, currentPID);
+        waitpid(process1, &status, WUNTRACED); 
+
+        //Ungroup process
+        setpgid(currentPID, currentPID);
+        setpgid(process1, process1);
+        tcsetpgrp(STDIN_FILENO, currentPID);
+
+        //Check process result (end process if it finishes uninterrupted)
+        int sig = WSTOPSIG(status);
+        if(debugJob){printf("JOBS.C exeFg(): child 1 signal: %d \n", sig);}
+        finishJob(process1, sig);
     }
     //2 Children pipeline
     else{
-        if(debugJob){printf("2 children [%d][%d]\n", fgJob.process1, fgJob.process2);}
-        //Group children together
-        setpgid(fgJob.process1, fgJob.process1);
-        setpgid(fgJob.process2, fgJob.process1);
+        if(debugJob){printf("2 children [%d][%d]\n", process1, process2);}
+        //Set process id to parent id group
+        setpgid(currentPID, currentPID);
+        setpgid(process1, currentPID);
+        setpgid(process2, currentPID);
 
-        //Execute code
-        kill(fgJob.process1, SIGCONT);
-        tcsetpgrp(STDIN_FILENO, fgJob.process1);
-        waitpid(fgJob.process1, &status, WUNTRACED); 
+        //Execute instruction
+        kill(process1, SIGCONT);
+        kill(process2, SIGCONT);
         tcsetpgrp(STDIN_FILENO, currentPID);
+        waitpid(process1, &status, WUNTRACED); 
+        waitpid(process2, &status2, WUNTRACED); 
+
+        //Ungroup process
+        setpgid(currentPID, currentPID);
+        setpgid(process1, process1);
+        setpgid(process2, process2);
+        tcsetpgrp(STDIN_FILENO, currentPID);
+
+        //Check process result (end process if it finishes uninterrupted)
+        //If any of the two children are stopped by SIGTSTP, do not finish process, even if the other is finished
+        int sig = WSTOPSIG(status);
+        if(debugJob){printf("JOBS.C exeFg(): child 1 signal: %d ", sig);}
+        if(sig != SIGTSTP){
+            if(debugJob){printf("child 2 signal: %d\n", sig);}
+            sig = WSTOPSIG(status2);
+        }
+        finishJob(process1, sig);
     }  
 }
 
@@ -256,13 +301,13 @@ int exeSpecialJob(char* cmd){
         if(debugJob){printf("Job: %d jobs\n", numJobs);}
         for(int i = 0; i < numJobs; i++){
             //Print each job
-            printf("Active Job: %s Stopped: %d Background: %d\n",jobList[i].c1Args[0], jobList[i].stopped, jobList[i].background);
+            printf("Num: %d Active Job: %s Stopped: %d Background: %d PIDs:[%d][%d]\n",jobList[i].jobNumber ,jobList[i].c1Args[0], jobList[i].stopped, jobList[i].background, jobList[i].process1, jobList[i].process2);
         }
 
         //Print finished jobs
         for(int i = 0; i < numFinished; i++){
             //Print each job
-            printf("Finished Job: %s\n",finished[i].c1Args[0]);
+            printf("Num: %d Finished Job: %s PIDs:[%d][%d]\n",finished[i].jobNumber ,finished[i].c1Args[0], finished[i].process1, finished[i].process2);
         }
         numFinished = 0;
 

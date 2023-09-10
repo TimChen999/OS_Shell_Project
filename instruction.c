@@ -187,6 +187,11 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 
         //Get status of child
         int sig = WSTOPSIG(status);
+
+        //For pipelining, check if second instruction is also interrupted
+        if(sig != SIGTSTP && exeIns.num > 1){
+            sig = WSTOPSIG(status2);
+        }
         
         //Child process done 
         if(debugIns){printf("PARENT PROCESS: [%d] Child done, return to parent, signal: %d\n", child1PID, sig);}

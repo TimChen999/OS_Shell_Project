@@ -20,6 +20,7 @@ struct job{
     char** c2Args;
     bool background;
     bool stopped;
+    int jobNumber;
 };
 
 pid_t setForeground(pid_t pid);
