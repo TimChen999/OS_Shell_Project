@@ -26,7 +26,32 @@ static int jobNumber;
 static pid_t reapedPIDs[500];
 static int numReaped;
 
-//Adds PID to reaped PID list and test if any job can be removed
+//Removed pid from reaped pid list(job associated with pid has been removed)
+int removeReapedPid(pid_t pid){
+    //Find index of PID
+    int index = -1;
+    for(int i = 0; i < numReaped; i++){
+        if(pid == reapedPIDs[i]){
+            if(debugJob){printf("JOBS.C removeReapedPid(pid_t pid): Remove [%d] at index %d\n", pid, i);}
+            index = i;
+        }
+    }
+
+    //PID not found
+    if(index == -1){
+        return -1;
+    }
+
+    //Remove PID from list (move all elements after up)
+    index++;
+    for(;index < numReaped; index++){
+        reapedPIDs[index - 1] = reapedPIDs[index];
+    }
+    numReaped--;
+    return 0;
+}
+
+//Adds PID to reaped PID list and test if any job can be removed (IMPLEMENT: REMOVE PIDS THAT HAVE BEEN REAPED AND RESPECTIVE JOBS HAVE BEEN REMOVED)
 int reapChild(pid_t pid){
     if(debugJob){printf("JOBS.C reapChild(pid_t pid): Reap child called: PID: %d numJobs:", pid);}
 
@@ -41,6 +66,7 @@ int reapChild(pid_t pid){
             //Matching PID found
             if(reapedPIDs[i] == jobList[x].process1 && jobList[x].process2 == 0){
                 if(debugJob){printf("JOBS.C reapChild(pid_t pid): Reap job p1 [%d] p2 [0]\n", jobList[x].process1);}
+                removeReapedPid(reapedPIDs[i]);
                 finishJob(jobList[x].process1, 99);
             }
         }       
@@ -54,10 +80,14 @@ int reapChild(pid_t pid){
                 //Matching PIDs found (2 children)
                 if(reapedPIDs[i] == jobList[x].process1 && reapedPIDs[j] == jobList[x].process2){
                     if(debugJob){printf("JOBS.C reapChild(pid_t pid): Reap job p1 [%d] p2 [%d]\n", jobList[x].process1, jobList[x].process2);}
+                    removeReapedPid(reapedPIDs[i]);
+                    removeReapedPid(reapedPIDs[j]);
                     finishJob(jobList[x].process1, 99);
                 }
                 else if(reapedPIDs[i] == jobList[x].process2 && reapedPIDs[j] == jobList[x].process1){
                     if(debugJob){printf("JOBS.C reapChild(pid_t pid): Reap job p1 [%d] p2 [%d]\n", jobList[x].process1, jobList[x].process2);}
+                    removeReapedPid(reapedPIDs[i]);
+                    removeReapedPid(reapedPIDs[j]);
                     finishJob(jobList[x].process1, 99);
                 }
             }
