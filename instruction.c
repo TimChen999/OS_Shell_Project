@@ -10,7 +10,7 @@
 #include <signal.h>
 #include "signal.h"
 
-bool debugIns = false;
+bool debugIns = true;
 
 //Store parent PID
 pid_t parentPID;
@@ -96,15 +96,15 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 }
                 //Set stdin
                 else if(exeIns.insList[1].stdin.type == TOFILE){
-                    //Try to open file
-                    if(open(exeIns.insList[1].stdin.stdinFileName, O_RDONLY) == -1){
-                    //Return error, stdin file doesn't exist
-                    if(debugIns){printf("stdin file not found");}
-                    return -1;
-                    }
-
                     //Set file desciptor
-                    int fileDescriptor2 = open(exeIns.insList[1].stdout.stdoutFileName, O_WRONLY);
+                    int fileDescriptor2 = open(exeIns.insList[1].stdin.stdinFileName, O_WRONLY);
+
+                    //File not found
+                    if(fileDescriptor2 == -1){
+                        //Return error, stdin file doesn't exist
+                        if(debugIns){printf("CHILD PROCESS: stdin file not found %s \n", exeIns.insList[1].stdin.stdinFileName);}
+                        return -1;
+                    }
 
                     //If successful (file exists), set stdin
                     dup2(fileDescriptor2, 0);
@@ -115,6 +115,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                     //Try to open file
                     if(open(exeIns.insList[1].stdout.stdoutFileName, O_RDONLY) == -1){
                         //stdout file doesn't exist, create file
+                        if(debugIns){printf("CHILD PROCESS: stdout file not found, create file %s \n", exeIns.insList[1].stdout.stdoutFileName);}
                         open(exeIns.insList[1].stdout.stdoutFileName, O_CREAT | O_WRONLY);
                     }
 
@@ -128,7 +129,8 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 if(exeIns.insList[1].stderr.type == TOFILE){
                     //Try to open file
                     if(open(exeIns.insList[1].stderr.stderrFileName, O_RDONLY) == -1){
-                        //stdout file doesn't exist, create file
+                        //stderr file doesn't exist, create file
+                        if(debugIns){printf("CHILD PROCESS: stderr file not found, create file %s \n", exeIns.insList[1].stderr.stderrFileName);}
                         open(exeIns.insList[1].stderr.stderrFileName, O_CREAT | O_WRONLY);
                     }
 
@@ -215,18 +217,21 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
         
         //Set stdin
         if(exeIns.insList[0].stdin.type == TOFILE){
-            //Try to open file
-            if(open(exeIns.insList[0].stdin.stdinFileName, O_RDONLY) == -1){
+            //Set file desciptor
+            int fileDescriptor = open(exeIns.insList[0].stdin.stdinFileName, O_WRONLY);
+
+            //File not found
+            if(fileDescriptor == -1){
                 //Return error, stdin file doesn't exist
-                if(debugIns){printf("stdin file not found");}
+                if(debugIns){printf("CHILD PROCESS: stdin file not found %s \n", exeIns.insList[0].stdin.stdinFileName);}
                 return -1;
             }
 
-            //Set file desciptor
-            int fileDescriptor = open(exeIns.insList[0].stdout.stdoutFileName, O_WRONLY);
+            //Read file
+            if(debugIns){printf("CHILD PROCESS: Read file %d, %s\n", fileDescriptor, exeIns.insList[0].stdin.stdinFileName);}
 
             //If successful (file exists), set stdin
-            dup2(fileDescriptor, 0);
+            dup2(fileDescriptor, STDIN_FILENO);
         }   
 
         //Pipe stdout of first command into write end of pipe (if pipelining)
@@ -243,11 +248,15 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             //Try to open file
             if(open(exeIns.insList[0].stdout.stdoutFileName, O_RDONLY) == -1){
                 //stdout file doesn't exist, create file
+                if(debugIns){printf("CHILD PROCESS: stdout file not found, create file %s \n", exeIns.insList[0].stdout.stdoutFileName);}
                 open(exeIns.insList[0].stdout.stdoutFileName, O_CREAT | O_WRONLY);
             }
 
             //Set file desciptor
             int fileDescriptor = open(exeIns.insList[0].stdout.stdoutFileName, O_WRONLY);
+
+            //Read file
+            if(debugIns){printf("CHILD PROCESS: write file %d, %s\n", fileDescriptor, exeIns.insList[0].stdout.stdoutFileName);}
 
             //Set stdout
             dup2(fileDescriptor, 1);
@@ -257,6 +266,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             //Try to open file
             if(open(exeIns.insList[0].stderr.stderrFileName, O_RDONLY) == -1){
                 //stdout file doesn't exist, create file
+                if(debugIns){printf("CHILD PROCESS: stderr file not found, create file %s \n", exeIns.insList[0].stderr.stderrFileName);}
                 open(exeIns.insList[0].stderr.stderrFileName, O_CREAT | O_WRONLY);
             }
 

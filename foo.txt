@@ -1,0 +1,13 @@
+CHILD PROCESS: Child: [10086] calls execvp with cmd: ls
+Makefile
+foo.txt
+instruction.c
+jobs.c
+jobs.h
+main.c
+parse.c
+parse.h
+signal.c
+signalHeader.h
+text.txt
+yash

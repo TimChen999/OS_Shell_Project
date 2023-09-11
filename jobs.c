@@ -9,7 +9,7 @@
 #include "jobs.h"
 #include "parse.h" //Dont call headers in headers
 
-bool debugJob = true;
+bool debugJob = false;
 
 //Global vars
 static struct job jobList[20]; //active

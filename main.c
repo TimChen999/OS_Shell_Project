@@ -43,7 +43,12 @@ int main() {
         char* input = (char *)malloc(sizeof(char) * 2000); //last byte of string is null
 
         //User Enters input
-        input = readline("#"); //readline returns pointer
+        input = readline("#"); //readline returns pointer (ISSUE: empty input results in a SEGFAULT)
+
+        //If null (Ctrl D EOF), exit
+        if(input == NULL){
+            return 0;
+        }
 
         //Size of instruction (number of processes)
         int size = 0;
