@@ -97,7 +97,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 //Set stdin
                 else if(exeIns.insList[1].stdin.type == TOFILE){
                     //Set file desciptor
-                    int fileDescriptor2 = open(exeIns.insList[1].stdin.stdinFileName, O_WRONLY);
+                    int fileDescriptor2 = open(exeIns.insList[1].stdin.stdinFileName, O_RDONLY);
 
                     //File not found
                     if(fileDescriptor2 == -1){
@@ -218,7 +218,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
         //Set stdin
         if(exeIns.insList[0].stdin.type == TOFILE){
             //Set file desciptor
-            int fileDescriptor = open(exeIns.insList[0].stdin.stdinFileName, O_WRONLY);
+            int fileDescriptor = open(exeIns.insList[0].stdin.stdinFileName, O_RDONLY);
 
             //File not found
             if(fileDescriptor == -1){

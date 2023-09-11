@@ -1,4 +1,4 @@
-CHILD PROCESS: Child: [10086] calls execvp with cmd: ls
+CHILD PROCESS: Child: [16200] calls execvp with cmd: ls
 Makefile
 foo.txt
 instruction.c

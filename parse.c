@@ -5,7 +5,7 @@
 
 //This file contains code to parse instauctions
 
-bool debug = true;
+bool debug = false;
 struct instruction* parseInput(char* input, int* size, bool* validity, bool* backg){
 //Determine if instruction should be run in foreground or background
     bool background; 
