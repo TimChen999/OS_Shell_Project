@@ -9,7 +9,7 @@
 #include "jobs.h"
 #include "parse.h" //Dont call headers in headers
 
-bool debugJob = false;
+bool debugJob = true;
 
 //Global vars
 static struct job jobList[20]; //active
@@ -255,18 +255,18 @@ int exeFg(){
     //One child, give temporary terminal control
     if(jobList[recent].numChild == 1){
         if(debugJob){printf("1 child [%d]\n", process1);}
-        //Set process id to parent id group
-        setpgid(currentPID, currentPID);
-        setpgid(process1, currentPID);
-
-        //Execute instruction
-        kill(process1, SIGCONT);
-        tcsetpgrp(STDIN_FILENO, currentPID);
-        waitpid(process1, &status, WUNTRACED); 
-
         //Ungroup process
         setpgid(currentPID, currentPID);
         setpgid(process1, process1);
+
+        //Resume process
+        kill(process1, SIGCONT);
+
+        //Set terminal control
+        tcsetpgrp(STDIN_FILENO, process1);
+        waitpid(process1, &status, WUNTRACED); 
+
+        //Give terminal control back to parent
         tcsetpgrp(STDIN_FILENO, currentPID);
 
         //Check process result (end process if it finishes uninterrupted)

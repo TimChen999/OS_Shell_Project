@@ -66,3 +66,11 @@ void sigChildHandler(int signal){
     }
 }
 
+//Init signals
+void initSignals(){
+    signal(SIGINT, SIG_IGN); //Ignore sig int for parent
+    signal(SIGTSTP, SIG_IGN); //Ignore sig tstp for parent
+    signal(SIGTTOU, SIG_IGN); //Ignore this everywhere
+    signal(SIGCHLD, sigChildHandler); //SIGCHILD handler
+}
+

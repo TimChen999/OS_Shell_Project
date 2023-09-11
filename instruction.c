@@ -10,7 +10,7 @@
 #include <signal.h>
 #include "signal.h"
 
-bool debugIns = true;
+bool debugIns = false;
 
 //Store parent PID
 pid_t parentPID;
@@ -202,6 +202,14 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             //Set child to done list (Onlt if not stopped with SIGSTOP)
             finishJob(child1PID, sig);
         }
+
+        //Move terminal control away from child processes 
+        pid_t myParentPid = getpid();
+        setpgid(myParentPid, myParentPid);
+        setpgid(child1PID, child1PID);
+        setpgid(child2PID, child2PID);
+        tcsetpgrp(STDIN_FILENO, myParentPid);
+        
     }
     //-----------------------------------------------------------------------------------
     //Child process

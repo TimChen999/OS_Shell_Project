@@ -21,3 +21,5 @@ int setForegroundProcess(pid_t processNumber);
 
 int setParentProcess(pid_t processNumber);
 
+void initSignals();
+
