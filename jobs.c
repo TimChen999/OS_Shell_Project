@@ -277,22 +277,21 @@ int exeFg(){
     //2 Children pipeline
     else{
         if(debugJob){printf("2 children [%d][%d]\n", process1, process2);}
-        //Set process id to parent id group
-        setpgid(currentPID, currentPID);
-        setpgid(process1, currentPID);
-        setpgid(process2, currentPID);
-
-        //Execute instruction
-        kill(process1, SIGCONT);
-        kill(process2, SIGCONT);
-        tcsetpgrp(STDIN_FILENO, currentPID);
-        waitpid(process1, &status, WUNTRACED); 
-        waitpid(process2, &status2, WUNTRACED); 
-
         //Ungroup process
         setpgid(currentPID, currentPID);
         setpgid(process1, process1);
-        setpgid(process2, process2);
+        setpgid(process2, process1);
+
+        //Resume process
+        kill(process1, SIGCONT);
+        kill(process2, SIGCONT);
+
+        //Set terminal control
+        tcsetpgrp(STDIN_FILENO, process1);
+        waitpid(process1, &status, WUNTRACED); 
+        waitpid(process2, &status, WUNTRACED);
+
+        //Give terminal control back to parent
         tcsetpgrp(STDIN_FILENO, currentPID);
 
         //Check process result (end process if it finishes uninterrupted)

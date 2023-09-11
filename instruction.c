@@ -69,6 +69,12 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 //Add job to list (2 children) has to be done in parent or values will not transfer
                 addJob(exeIns.num, child1PID, child2PID, exeIns.insList[0].args, exeIns.insList[1].args, exeIns.background, false); 
 
+                //group pgid, give terminal control
+                setpgid(child1PID, child1PID);
+                if(exeIns.num > 1){
+                    setpgid(child2PID, child1PID);}
+                tcsetpgrp(STDIN_FILENO, child1PID);
+
                 //Close pipes (Parent doesn't need pipes)
                 close(pipes[0]);
                 close(pipes[1]);
@@ -82,6 +88,11 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 
                 //set second child PID
                 child2PID = getpid(); 
+
+                //group pgid, give terminal control
+                setpgid(child1PID, child1PID);
+                setpgid(child2PID, child1PID);
+                tcsetpgrp(STDIN_FILENO, child1PID);
 
                 myPid2 = getpid();
                 if(debugIns){printf("CHILD PROCESS2: [%d] INFO: pipeBool %d, exeIns.num %d, command %s\n", myPid2, pipeBool, 1, exeIns.insList[1].args[0]);}
@@ -203,12 +214,9 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             finishJob(child1PID, sig);
         }
 
-        //Move terminal control away from child processes 
-        pid_t myParentPid = getpid();
-        setpgid(myParentPid, myParentPid);
-        setpgid(child1PID, child1PID);
-        setpgid(child2PID, child2PID);
-        tcsetpgrp(STDIN_FILENO, myParentPid);
+        //Move terminal control back to parent
+        setpgid(parentPID, parentPID);
+        tcsetpgrp(STDIN_FILENO, parentPID);
         
     }
     //-----------------------------------------------------------------------------------
@@ -221,7 +229,14 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 
         //Data for child process
         myPid = getpid();
+        child1PID = myPid;
         if(debugIns){printf("CHILD PROCESS: [%d] INFO: pipeBool %d, exeIns.num %d, command %s\n", myPid, pipeBool, exeIns.num, exeIns.insList[0].args[0]);}
+
+        //group pgid, give terminal control
+        if(exeIns.num == 1){
+            setpgid(child1PID, child1PID);
+            tcsetpgrp(STDIN_FILENO, child1PID);
+        }
         
         //Set stdin
         if(exeIns.insList[0].stdin.type == TOFILE){
