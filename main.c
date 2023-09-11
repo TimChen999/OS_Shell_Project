@@ -34,10 +34,8 @@ int main() {
     while(1){
         //init signal
         initJobs();
-        signal(SIGINT, SIG_IGN); //Ignore sig int for parent
-        signal(SIGTSTP, SIG_IGN); //Ignore sig tstp for parent
-        signal(SIGTTOU, SIG_IGN); //Ignore this everywhere
-        signal(SIGCHLD, sigChildHandler); //SIGCHILD handler
+        resetProcess();
+        setHandlers();
 
         //New input var for new line of input
         char* input = (char *)malloc(sizeof(char) * 2000); //last byte of string is null

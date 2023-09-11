@@ -17,7 +17,13 @@ void sigChildHandler(int signal);
 
 int resetProcess();
 
-int setForegroundProcess(pid_t processNumber);
+int setForegroundProcess(pid_t processNumber, pid_t processNumber2);
 
 int setParentProcess(pid_t processNumber);
+
+int setForegroundProcess1(pid_t processNumber);
+
+int setForegroundProcess2(pid_t processNumber);
+
+void setHandlers();
 

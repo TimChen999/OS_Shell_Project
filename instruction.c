@@ -10,7 +10,7 @@
 #include <signal.h>
 #include "signal.h"
 
-bool debugIns = true;
+bool debugIns = false;
 
 //Store parent PID
 pid_t parentPID;
@@ -45,6 +45,13 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 
         //Add job to list (One child)
         if(exeIns.num == 1){
+            //Set to foreground
+            if(!exeIns.background){
+                if(debugIns){printf("CHILD PROCESS: foreground1 [%d]", child1PID);}
+                setForegroundProcess1(child1PID);
+            }
+
+            //Add job to list
             addJob(exeIns.num, child1PID, 0, exeIns.insList[0].args, NULL, exeIns.background, false);  
         }
 
@@ -66,6 +73,12 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 //Set child2 pid
                 child2PID = curPid2;
 
+                //Set to foreground
+                if(!exeIns.background){
+                    if(debugIns){printf("CHILD PROCESS: foreground [%d][%d]", child1PID, child2PID);}
+                    setForegroundProcess(child1PID, child2PID);
+                }
+
                 //Add job to list (2 children) has to be done in parent or values will not transfer
                 addJob(exeIns.num, child1PID, child2PID, exeIns.insList[0].args, exeIns.insList[1].args, exeIns.background, false); 
 
@@ -76,13 +89,8 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             //Second Child process
             //-----------------------------------------------------------------------------------
             } else if (curPid2 == 0) {
-                //Reset sigint to default in child
-                signal(SIGINT, SIG_DFL); 
-                signal(SIGTSTP, SIG_DFL);
-
                 //set second child PID
                 child2PID = getpid(); 
-
                 myPid2 = getpid();
                 if(debugIns){printf("CHILD PROCESS2: [%d] INFO: pipeBool %d, exeIns.num %d, command %s\n", myPid2, pipeBool, 1, exeIns.insList[1].args[0]);}
 
@@ -187,6 +195,9 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
             waitpid(child1PID, &status, WNOHANG); 
         } 
 
+        //Remove foreground processes
+        resetProcess();
+
         //Get status of child
         int sig = WSTOPSIG(status);
 
@@ -207,10 +218,6 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
     //Child process
     //-----------------------------------------------------------------------------------
     else if (curPid == 0) {
-        //Reset sigint to default in child
-        signal(SIGINT, SIG_DFL); 
-        signal(SIGTSTP, SIG_DFL);
-
         //Data for child process
         myPid = getpid();
         if(debugIns){printf("CHILD PROCESS: [%d] INFO: pipeBool %d, exeIns.num %d, command %s\n", myPid, pipeBool, exeIns.num, exeIns.insList[0].args[0]);}

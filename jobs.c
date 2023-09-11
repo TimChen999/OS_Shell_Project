@@ -9,7 +9,7 @@
 #include "jobs.h"
 #include "parse.h" //Dont call headers in headers
 
-bool debugJob = false;
+bool debugJob = true;
 
 //Global vars
 static struct job jobList[20]; //active
@@ -226,10 +226,14 @@ int exeBg(){
     //Continue the process
     kill(jobList[recent].process1, SIGCONT);
     kill(jobList[recent].process2, SIGCONT);
+
+    //Print job that was moved to background 
 }
 
 //Execute the "fg" instruction 
 int exeFg(){
+    //Print command (not job) moved to foreground
+
     int recent = -1;
     recent = mostRecentStopped();
     jobList[recent].stopped = false;
@@ -255,6 +259,10 @@ int exeFg(){
     //One child, give temporary terminal control
     if(jobList[recent].numChild == 1){
         if(debugJob){printf("1 child [%d]\n", process1);}
+        //Set to foreground
+        if(debugJob){printf("JOB>C: foreground2 [%d]", process1);}
+        setForegroundProcess1(process1);
+
         //Set process id to parent id group
         setpgid(currentPID, currentPID);
         setpgid(process1, currentPID);
@@ -273,10 +281,15 @@ int exeFg(){
         int sig = WSTOPSIG(status);
         if(debugJob){printf("JOBS.C exeFg(): child 1 signal: %d \n", sig);}
         finishJob(process1, sig);
+        resetProcess();
     }
     //2 Children pipeline
     else{
         if(debugJob){printf("2 children [%d][%d]\n", process1, process2);}
+        //Set to foreground
+        if(debugJob){printf("JOB>C: foreground2 [%d][%d]", process1, process2);}
+        setForegroundProcess(process1, process2);
+
         //Set process id to parent id group
         setpgid(currentPID, currentPID);
         setpgid(process1, currentPID);
@@ -304,7 +317,9 @@ int exeFg(){
             sig = WSTOPSIG(status2);
         }
         finishJob(process1, sig);
+        resetProcess();
     }  
+    return 0;
 }
 
 //Execute fg/bg/jobs (for these, the command itself is not added as an arg)
