@@ -3,9 +3,9 @@
 #include <stdbool.h>
 #include "parse.h"
 
-//This file contains code to parse instauctions
-
+//This file contains code to parse instructions
 bool debug = false;
+
 struct instruction* parseInput(char* input, int* size, bool* validity, bool* backg){
 //Determine if instruction should be run in foreground or background
     bool background; 
@@ -21,6 +21,11 @@ struct instruction* parseInput(char* input, int* size, bool* validity, bool* bac
     insList[indexIns] = currentInstruction; //Put instruction on stack to heap
     insList[indexIns].args = (char**)malloc((currentInstruction.numArgs + 2) * sizeof(char*));
     insList[indexIns].args[insList[indexIns].numArgs] = NULL; //Insert null at end of array
+
+    //Empty command
+    if(element == NULL){
+        return NULL;
+    }
 
     //Loop through each element of input
     while(element != NULL && valid == 1){  

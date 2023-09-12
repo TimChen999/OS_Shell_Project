@@ -83,14 +83,17 @@ int main() {
         //Create pipe to pass as parameter (doing so allows the function to call itself without overriding pipe with new definition, allowing piping to work)
         int pipes[2] = {0,0};
 
-        //Execute fg/bg/jobs, special tasks
-        char* cmd = exeList.insList[0].command;
-        if((strcmp(cmd, "fg") == 0 || strcmp(cmd, "bg") == 0) || strcmp(cmd, "jobs") == 0){
-            exeSpecialJob(cmd);
-        }
-        //Execute tasks
-        else if(valid){
-            int a = executeInstructions(exeList, pipeBool, pipes);
+        //Execute instructions if list is not null
+        if(insList != NULL && valid){
+            //Execute fg/bg/jobs, special tasks
+            char* cmd = exeList.insList[0].command;
+            if((strcmp(cmd, "fg") == 0 || strcmp(cmd, "bg") == 0) || strcmp(cmd, "jobs") == 0){
+                exeSpecialJob(cmd);
+            }
+            //Execute tasks
+            else if(valid){
+                int a = executeInstructions(exeList, pipeBool, pipes);
+            }
         }
     }
     return 0;
