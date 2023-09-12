@@ -21,6 +21,7 @@ pid_t child1PID;
 int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
     pid_t curPid = getpid(); 
     parentPID = getpid();
+    setpgid(parentPID, parentPID);
     pid_t myPid;
     if(debugIns){printf("Execute %d Instructions, Current pid: %d\n", exeIns.num, curPid);}
 
@@ -71,6 +72,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
 
                 //group pgid, give terminal control
                 if(true){
+                    setpgid(parentPID, parentPID);
                     setpgid(child1PID, child1PID);
                     if(exeIns.num > 1){
                         setpgid(child2PID, child1PID);}
@@ -92,9 +94,10 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 child2PID = getpid(); 
 
                 //group pgid, give terminal control
+                setpgid(parentPID, parentPID);
+                setpgid(child1PID, child1PID);
+                setpgid(child2PID, child1PID);
                 if(!exeIns.background){
-                    setpgid(child1PID, child1PID);
-                    setpgid(child2PID, child1PID);
                     tcsetpgrp(STDIN_FILENO, child1PID);
                 }
 
@@ -219,8 +222,8 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
         }
 
         //Move terminal control back to parent
+        setpgid(parentPID, parentPID);
         if(!exeIns.background){
-            setpgid(parentPID, parentPID);
             tcsetpgrp(STDIN_FILENO, parentPID);
         }
         
@@ -239,8 +242,9 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
         if(debugIns){printf("CHILD PROCESS: [%d] INFO: pipeBool %d, exeIns.num %d, command %s\n", myPid, pipeBool, exeIns.num, exeIns.insList[0].args[0]);}
 
         //group pgid, give terminal control
+        setpgid(parentPID, parentPID);
+        setpgid(child1PID, child1PID);
         if(exeIns.num == 1 && !exeIns.background){
-            setpgid(child1PID, child1PID);
             tcsetpgrp(STDIN_FILENO, child1PID);
         }
         

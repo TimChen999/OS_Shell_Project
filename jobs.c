@@ -430,7 +430,7 @@ int exeSpecialJob(char* cmd){
                 index++;
             }
             //Pipelining
-            if(jobList[i].numChild > 1){
+            if(finished[i].numChild > 1){
                 printf("| ");
                 index = 0;
                 while(true){
