@@ -70,10 +70,12 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 addJob(exeIns.num, child1PID, child2PID, exeIns.insList[0].args, exeIns.insList[1].args, exeIns.background, false); 
 
                 //group pgid, give terminal control
-                setpgid(child1PID, child1PID);
-                if(exeIns.num > 1){
-                    setpgid(child2PID, child1PID);}
-                tcsetpgrp(STDIN_FILENO, child1PID);
+                if(true){
+                    setpgid(child1PID, child1PID);
+                    if(exeIns.num > 1){
+                        setpgid(child2PID, child1PID);}
+                    tcsetpgrp(STDIN_FILENO, child1PID);
+                }
 
                 //Close pipes (Parent doesn't need pipes)
                 close(pipes[0]);
@@ -90,9 +92,11 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
                 child2PID = getpid(); 
 
                 //group pgid, give terminal control
-                setpgid(child1PID, child1PID);
-                setpgid(child2PID, child1PID);
-                tcsetpgrp(STDIN_FILENO, child1PID);
+                if(!exeIns.background){
+                    setpgid(child1PID, child1PID);
+                    setpgid(child2PID, child1PID);
+                    tcsetpgrp(STDIN_FILENO, child1PID);
+                }
 
                 myPid2 = getpid();
                 if(debugIns){printf("CHILD PROCESS2: [%d] INFO: pipeBool %d, exeIns.num %d, command %s\n", myPid2, pipeBool, 1, exeIns.insList[1].args[0]);}
@@ -215,8 +219,10 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
         }
 
         //Move terminal control back to parent
-        setpgid(parentPID, parentPID);
-        tcsetpgrp(STDIN_FILENO, parentPID);
+        if(!exeIns.background){
+            setpgid(parentPID, parentPID);
+            tcsetpgrp(STDIN_FILENO, parentPID);
+        }
         
     }
     //-----------------------------------------------------------------------------------
@@ -233,7 +239,7 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
         if(debugIns){printf("CHILD PROCESS: [%d] INFO: pipeBool %d, exeIns.num %d, command %s\n", myPid, pipeBool, exeIns.num, exeIns.insList[0].args[0]);}
 
         //group pgid, give terminal control
-        if(exeIns.num == 1){
+        if(exeIns.num == 1 && !exeIns.background){
             setpgid(child1PID, child1PID);
             tcsetpgrp(STDIN_FILENO, child1PID);
         }
@@ -314,4 +320,5 @@ int executeInstructions(struct execution exeIns, bool pipeBool, int pipes[2]){
     return 0;
 }
 
-//For foreground, WUNTRACED will track if child was stopped and it writes to status war, WSTOPSIG(status) will check what is was stopped 
+//Issues: if you only give foreground to children if they are foreground, it makes it so if they start at background and then go to foreground, they can't be interrupted
+//Issue: if you give children foreground regardless and they start at background, the code for giving foreground to parent might trigger before the code for giving foreground to children might trigger, ending the code

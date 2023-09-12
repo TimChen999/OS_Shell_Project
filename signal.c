@@ -9,7 +9,7 @@
 #include "signalHeader.h"
 #include "jobs.h"
 
-bool sigDebug = true;
+bool sigDebug = false;
 
 //Parent progress
 pid_t parentProcess; 

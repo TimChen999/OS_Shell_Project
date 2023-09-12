@@ -9,7 +9,7 @@
 #include "jobs.h"
 #include "parse.h" //Dont call headers in headers
 
-bool debugJob = true;
+bool debugJob = false;
 
 //Global vars
 static struct job jobList[20]; //active
@@ -25,6 +25,9 @@ static int jobNumber;
 //Array of PIDs from SIGCHILD handler, whenever two pids within the list match the two pids of a job, remove the job
 static pid_t reapedPIDs[500];
 static int numReaped;
+
+//Most recent job index
+int recentJob;
 
 //Removed pid from reaped pid list(job associated with pid has been removed)
 int removeReapedPid(pid_t pid){
@@ -105,7 +108,8 @@ int initJobs(){
         numFinished = 0;
         numReaped = 0;
         jobsInitialized = true;
-        jobNumber = 0;
+        jobNumber = 1;
+        recentJob = -1;
     }
     return 0;
 }
@@ -226,6 +230,52 @@ int exeBg(){
     //Continue the process
     kill(jobList[recent].process1, SIGCONT);
     kill(jobList[recent].process2, SIGCONT);
+
+    //Print the command resumed by BG
+    printf("[%d]", jobList[recent].jobNumber);
+
+    //Print +/- for most recent
+    recentJob = numJobs - 1;
+    if(recent == recentJob){
+        printf("+ ");
+    }
+    else{
+        printf("- ");
+    }
+
+    //Print running
+    printf("Running\t");
+
+    //Print args
+    int index = 0;
+    while(true){
+        char* arg = jobList[recent].c1Args[index];
+        //Break if null
+        if(arg == NULL){
+            break;
+        }
+        //Print arg
+        printf("%s ", arg);
+        index++;
+    }
+    //Pipelining
+    if(jobList[recent].numChild > 1){
+        printf("| ");
+        index = 0;
+        while(true){
+            char* arg = jobList[recent].c2Args[index];
+            //Break if null
+            if(arg == NULL){
+                break;
+            }
+            //Print arg
+            printf("%s ", arg);
+            index++;
+        }
+    }
+
+    //Newline
+    printf("\n");
 }
 
 //Execute the "fg" instruction 
@@ -251,8 +301,40 @@ int exeFg(){
     //Current pid to give back terminal control
     pid_t currentPID = getpid();
 
+    //Print process args
+    //Print args
+    int index = 0;
+    while(true){
+        char* arg = jobList[recent].c1Args[index];
+        //Break if null
+        if(arg == NULL){
+            break;
+        }
+        //Print arg
+        printf("%s ", arg);
+        index++;
+    }
+    //Pipelining
+    if(jobList[recent].numChild > 1){
+        printf("| ");
+        index = 0;
+        while(true){
+            char* arg = jobList[recent].c2Args[index];
+            //Break if null
+            if(arg == NULL){
+                break;
+            }
+            //Print arg
+            printf("%s ", arg);
+            index++;
+        }
+    }
+
+    //Newline
+    printf("\n");
+
     //Continue the process in foreground
-    //One child, give temporary terminal control
+    //Give temporary terminal control
     if(jobList[recent].numChild == 1){
         if(debugJob){printf("1 child [%d]\n", process1);}
         //Ungroup process
@@ -277,7 +359,7 @@ int exeFg(){
     //2 Children pipeline
     else{
         if(debugJob){printf("2 children [%d][%d]\n", process1, process2);}
-        //Ungroup process
+        //Group process
         setpgid(currentPID, currentPID);
         setpgid(process1, process1);
         setpgid(process2, process1);
@@ -325,18 +407,102 @@ int exeSpecialJob(char* cmd){
     }
 
     //Jobs
-    if(strcmp(cmd, "jobs") == 0){
-        //Print jobs
-        if(debugJob){printf("Job: %d jobs\n", numJobs);}
-        for(int i = 0; i < numJobs; i++){
-            //Print each job
-            printf("Num: %d Active Job: %s Stopped: %d Background: %d PIDs:[%d][%d]\n",jobList[i].jobNumber ,jobList[i].c1Args[0], jobList[i].stopped, jobList[i].background, jobList[i].process1, jobList[i].process2);
+    if(strcmp(cmd, "jobs") == 0){    
+        //Print finished jobs
+        recentJob = numJobs - 1;
+        for(int i = 0; i < numFinished; i++){
+            //Debug print
+            //printf("Num: %d Finished Job: %s PIDs:[%d][%d]\n",finished[i].jobNumber ,finished[i].c1Args[0], finished[i].process1, finished[i].process2);
+
+            //Print finished job
+            printf("[%d]- Done\t", finished[i].jobNumber);
+            
+            //Print args
+            int index = 0;
+            while(true){
+                char* arg = finished[i].c1Args[index];
+                //Break if null
+                if(arg == NULL){
+                    break;
+                }
+                //Print arg
+                printf("%s ", arg);
+                index++;
+            }
+            //Pipelining
+            if(jobList[i].numChild > 1){
+                printf("| ");
+                index = 0;
+                while(true){
+                    char* arg = finished[i].c2Args[index];
+                    //Break if null
+                    if(arg == NULL){
+                        break;
+                    }
+                    //Print arg
+                    printf("%s ", arg);
+                    index++;
+                }
+            }
+
+            //Newline
+            printf("\n");
         }
 
-        //Print finished jobs
-        for(int i = 0; i < numFinished; i++){
-            //Print each job
-            printf("Num: %d Finished Job: %s PIDs:[%d][%d]\n",finished[i].jobNumber ,finished[i].c1Args[0], finished[i].process1, finished[i].process2);
+        //Print active jobs
+        if(debugJob){printf("Job: %d jobs\n", numJobs);}
+        for(int i = 0; i < numJobs; i++){
+            //Debug print
+            //printf("Num: %d Active Job: %s Stopped: %d Background: %d PIDs:[%d][%d]\n",jobList[i].jobNumber ,jobList[i].c1Args[0], jobList[i].stopped, jobList[i].background, jobList[i].process1, jobList[i].process2);
+
+            //Print active job
+            printf("[%d]", jobList[i].jobNumber);
+
+            //Print +/- for most recent
+            if(i == recentJob){
+                printf("+ ");
+            }
+            else{
+                printf("- ");
+            }
+
+            //Print running/stopped
+            if(jobList[i].stopped == true){
+                printf("Stopped\t");
+            }
+            else{
+                printf("Running\t");
+            }
+
+            //Print args
+            int index = 0;
+            while(true){
+                char* arg = jobList[i].c1Args[index];
+                //Break if null
+                if(arg == NULL){
+                    break;
+                }
+                //print arg
+                printf("%s ", arg);
+                index++;
+            }
+            //Pipelining
+            if(jobList[i].numChild > 1){
+                printf("| ");
+                index = 0;
+                while(true){
+                    char* arg = jobList[i].c2Args[index];
+                    //Break if null
+                    if(arg == NULL){
+                        break;
+                    }
+                    //Print arg
+                    printf("%s ", arg);
+                    index++;
+                }
+            }
+            //Newline
+            printf("\n");
         }
         numFinished = 0;
 
